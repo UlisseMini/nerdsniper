@@ -4,45 +4,41 @@ ncat -lvkp 1234 | python3 archiver.py
 Letting ncat do all the heavy lifting is glorious.
 """
 
-# TODO
-# + Implement compress()
-# + Implement saving of the users dict once it gets to a large-ish size
-#   Have separate dict where users[id] = None for checking if we've seen the user,
-#   and another dict where users[id] = userobj, for before we save to non volitile storage.
-# - Save tweets to a file, basic streaming with csv/ndjson keys should work
-
-# NOTES:
-# We don't save userids set because its saved along with the other users sent to stdout.
-
 import json
 from datetime import datetime
-from sys import stderr
+import sys
+import gzip
+import io
 
-# ~1-2kb/user, so this is ~2mb at most.
-# (save just means print to stdout, I need to fuel my pipe addiction.)
-SAVE_EVERY = 1000
 
 # what order the user data should be in the savefile.
 # (this is also used as a header!)
-SCHEMA = [
+USER_SCHEMA = [
     'id', 'name', 'username', 'url', 'description',
     'created_at', 'pinned_tweet_id', 'protected', 'verified',
     'followers_count', 'following_count', 'tweet_count',
 ]
 
-userids = set() # for checking duplicate users.
-users = list()  # saved to disk and cleared every so often.
+TWEET_SCHEMA = [
+    "id", "text", "source", "lang",
+    "author_id", "conversation_id", "in_reply_to_user_id",
+    "created_at", "possibly_sensitive",
+    "like_count", "quote_count", "reply_count", "retweet_count",
+]
+
+# TODO: Get from args (argparse?)
+USERS_FILE = 'users.json.gz'
+TWEETS_FILE = 'tweets.json.gz'
+
+userids = set()  # for checking duplicate users.
 
 # the logging module is a bloated piece of shit
 def log(*args, **kwargs):
-    print(*args, **kwargs, file=stderr)
+    print(*args, **kwargs, file=sys.stderr)
 
 
-def serialize_users(users):
-    for user in users:
-        # Print the user in json list format as defined by schema.
-        lst = [user.get(k) for k in SCHEMA]
-        print(json.dumps(lst))
+def serialize(obj, schema, fp):
+    json.dump([obj.get(k) for k in schema], fp)
 
 
 def rm(d, key):
@@ -50,55 +46,77 @@ def rm(d, key):
         del d[key]
 
 
-def compress(user):
-    # TODO: Move this into ./fetcher.py for speed (expressiveness more important now)
+def flatten_pubmet(obj):
+    # flatten public_metrics
+    for k, v in obj['public_metrics'].items():
+        obj[k] = v
+    del obj['public_metrics']
 
-    # waste of space
-    rm(user, 'profile_image_url')
-    rm(user, 'entities')
+    return obj
 
-    # public_metrics should always be defined.
-    rm(user['public_metrics'], 'listed_count')
 
-    # does not support the .000Z extension so, we remove it
-    # fromisoformat is just intended to be the inverse of
+# parse the timestamps used for the twitter api
+def iso_to_unix(s):
+    # fromisoformat does not support the .000Z extension so, we remove it
+    # since fromisoformat just intended to be the inverse of
     # datetime.isoformat().
     # we cast to int for some easy space saving, and to avoid screwing things up
     # later in serilization. (we don't record sub second level accuracy)
-    user['created_at'] = int(datetime.fromisoformat(user['created_at'][:-5]).timestamp())
-
-    # flatten public_metrics
-    for k, v in user['public_metrics'].items():
-        user[k] = v
-    del user['public_metrics']
+    return int(datetime.fromisoformat(s[:-5]).timestamp())
 
 
-    return user
+def prepare(obj):
+    """
+    Prepare obj for serialization, it can be a tweet or user obj.
+    NOTE: this does not use the schema, that is done in serialize()
+    """
+
+    rm(obj['public_metrics'], 'listed_count')
+    obj['created_at'] = iso_to_unix(obj['created_at'])
+
+    return flatten_pubmet(obj)
 
 
-def process(users, userids, tweet):
+def process(tweet, userids, users_file, tweets_file):
+    new_users = []
+
+    # should always have at least one user, the author.
     for user in tweet['includes']['users']:
-        uid = int(user['id'])
+        if user['id'] not in userids:
+            userids.add(user['id'])
+            serialize(prepare(user), USER_SCHEMA, users_file)
 
-        if uid not in userids:
-            users.append(compress(user))
-            userids.add(uid)
 
-    if len(users) > SAVE_EVERY:
-        serialize_users(users)
-        users.clear()
+    # Save the tweet (data contains tweet data)
+    serialize(prepare(tweet['data']), TWEET_SCHEMA, tweets_file)
 
 
 
-print(json.dumps(SCHEMA)) # dump the header at the top of the file
-tweets = 0
-while True:
-    tweets += 1
-    log(f'tweets: {tweets} users: {len(userids)}')
+# mode 'wt' is not supported on some versions of python.
+def gzip_open(path, mode='w'):
+    return io.TextIOWrapper(gzip.GzipFile(path, mode))
+
+def loop(line, num_tweets, users_file, tweets_file):
+    if num_tweets % 100 == 0:
+        log(f'tweets: {num_tweets} users: {len(userids)}')
+
     try:
-        tweet = json.loads(input())
-        process(users, userids, tweet)
+        tweet = json.loads(line)
+        process(tweet, userids, users_file, tweets_file)
 
     except (json.JSONDecodeError, IndexError) as e:
-        log(e)
+        log(f'Error: {e} parsing: {repr(line)}')
 
+
+def main():
+    with gzip_open(USERS_FILE) as uf, gzip_open(TWEETS_FILE) as tf:
+        num_tweets = 0
+        log('Waiting for tweets...')
+        for line in sys.stdin:
+            if line.strip() != '':
+                num_tweets += 1
+                loop(line, num_tweets, uf, tf)
+
+
+if __name__ == '__main__':
+    main()
