@@ -104,7 +104,7 @@ def loop(line, num_tweets, users_file, tweets_file):
         tweet = json.loads(line)
         process(tweet, userids, users_file, tweets_file)
 
-    except (json.JSONDecodeError, IndexError) as e:
+    except (json.JSONDecodeError, IndexError, KeyError) as e:
         log(f'Error: {e} parsing: {repr(line)}')
 
 
