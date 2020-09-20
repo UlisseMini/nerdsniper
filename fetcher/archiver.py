@@ -1,7 +1,7 @@
 """
 Tweet objects are piped to us line by line, this script is meant to be ran as
-ncat -lvkp 1234 | python3 archiver.py
-Letting ncat do all the heavy lifting is glorious.
+python3 listener.py | python3 archiver.py
+Ncat was giving us bullshit race conditions so fuck that, wrote my own ncat <o/
 """
 
 import json
