@@ -38,7 +38,7 @@ type Data struct {
 	PossiblySensitive bool               `json:"possibly_sensitive"`
 	Text              string             `json:"text"`
 	AuthorID          string             `json:"author_id"`
-	PublicMetrics     PublicMetrics      `json:"public_metrics"`
+	PublicMetrics     PublicMetricsTweet `json:"public_metrics"`
 	Lang              string             `json:"lang"`
 	ConversationID    string             `json:"conversation_id"`
 	ID                string             `json:"id"`
@@ -66,45 +66,37 @@ type URL struct {
 	Urls []Urls `json:"urls"`
 }
 
-// Users ...
-type Users struct {
-	Name            string        `json:"name"`
-	Verified        bool          `json:"verified"`
-	Location        string        `json:"location"`
-	ProfileImageURL string        `json:"profile_image_url"`
-	ID              string        `json:"id"`
-	URL             string        `json:"url"`
-	PinnedTweetID   string        `json:"pinned_tweet_id"`
-	CreatedAt       time.Time     `json:"created_at"`
-	PublicMetrics   PublicMetrics `json:"public_metrics"`
-	Description     string        `json:"description"`
-	Username        string        `json:"username"`
-	Protected       bool          `json:"protected"`
+// User ...
+type User struct {
+	Name            string            `json:"name"`
+	Verified        bool              `json:"verified"`
+	Location        string            `json:"location"`
+	ProfileImageURL string            `json:"profile_image_url"`
+	ID              string            `json:"id"`
+	URL             string            `json:"url"`
+	PinnedTweetID   string            `json:"pinned_tweet_id"`
+	CreatedAt       time.Time         `json:"created_at"`
+	PublicMetrics   PublicMetricsUser `json:"public_metrics"`
+	Description     string            `json:"description"`
+	Username        string            `json:"username"`
+	Protected       bool              `json:"protected"`
 }
 
-// PublicMetrics ...
-type PublicMetrics struct {
-	RetweetCount int `json:"retweet_count"`
-	ReplyCount   int `json:"reply_count"`
-	LikeCount    int `json:"like_count"`
-	QuoteCount   int `json:"quote_count"`
-}
-
-// Tweets ...
-type Tweets struct {
-	Source            string        `json:"source"`
-	CreatedAt         time.Time     `json:"created_at"`
-	PossiblySensitive bool          `json:"possibly_sensitive"`
-	Text              string        `json:"text"`
-	AuthorID          string        `json:"author_id"`
-	PublicMetrics     PublicMetrics `json:"public_metrics"`
-	Lang              string        `json:"lang"`
-	ConversationID    string        `json:"conversation_id"`
-	ID                string        `json:"id"`
+// Tweet ...
+type Tweet struct {
+	Source            string             `json:"source"`
+	CreatedAt         time.Time          `json:"created_at"`
+	PossiblySensitive bool               `json:"possibly_sensitive"`
+	Text              string             `json:"text"`
+	AuthorID          string             `json:"author_id"`
+	PublicMetrics     PublicMetricsTweet `json:"public_metrics"`
+	Lang              string             `json:"lang"`
+	ConversationID    string             `json:"conversation_id"`
+	ID                string             `json:"id"`
 }
 
 // Includes ...
 type Includes struct {
-	Users  []Users  `json:"users"`
-	Tweets []Tweets `json:"tweets"`
+	Users  []User  `json:"users"`
+	Tweets []Tweet `json:"tweets"`
 }
