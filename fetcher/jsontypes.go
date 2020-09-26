@@ -44,6 +44,21 @@ type Data struct {
 	ID                string             `json:"id"`
 }
 
+func (d Data) asTweet() Tweet {
+	return Tweet{
+		d.Source,
+		d.CreatedAt,
+		d.PossiblySensitive,
+		d.Text,
+		d.AuthorID,
+		d.PublicMetrics,
+		d.Lang,
+		d.ConversationID,
+		d.ID,
+	}
+
+}
+
 // PublicMetricsUser ...
 type PublicMetricsUser struct {
 	FollowersCount int `json:"followers_count"`
@@ -73,6 +88,7 @@ type User struct {
 	Location        string            `json:"location"`
 	ProfileImageURL string            `json:"profile_image_url"`
 	ID              string            `json:"id"`
+	id              int64             // we parse ID to int64 in code.
 	URL             string            `json:"url"`
 	PinnedTweetID   string            `json:"pinned_tweet_id"`
 	CreatedAt       time.Time         `json:"created_at"`

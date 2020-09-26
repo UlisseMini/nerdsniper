@@ -12,6 +12,8 @@ import (
 	"os"
 	"time"
 
+	"strconv"
+
 	"github.com/lib/pq"
 )
 
@@ -149,12 +151,24 @@ func duplicates(db *sql.DB, userids []int64) (map[int64]bool, error) {
 	return dups, nil
 }
 
-func removeDuplicates(dups map[int64]bool, users []int64) []int64 {
-	for i, user := range users {
-		if dups[user] {
-			users = remove(users, i)
+func removeDuplicates(dups map[int64]bool, users []User) []User {
+	i := 0 // output index
+	for _, user := range users {
+		if !dups[user.id] {
+			users[i] = user
+			i++
+
+			// if the user shows up again, they are a duplicate.
+			// we need this since users can post comments on their own tweets.
+			dups[user.id] = true
 		}
 	}
+
+	// if this leaks memory i'm suing google
+	log.Printf("users before: %#v", useridsFromUsers(users))
+	users = users[:i]
+	log.Printf("users after: %#v", useridsFromUsers(users))
+	log.Printf("dups: %#v", dups)
 	return users
 }
 
@@ -168,9 +182,30 @@ var userColumns = []string{ // constant
 	"tweets",
 }
 
-func addUsers(db *sql.DB, users []User) error {
-	// todo: check duplicates
+func dbUser(user User) (values []interface{}, err error) {
+	pinnedTweetID := sql.NullInt64{}
+	pinnedTweetID.Int64, err = strconv.ParseInt(user.PinnedTweetID, 10, 64)
+	pinnedTweetID.Valid = err == nil
 
+	return []interface{}{
+		user.id, user.Name, user.Username, user.URL, user.Description,
+
+		user.Location, user.CreatedAt, pinnedTweetID, user.Protected, user.Verified,
+		user.PublicMetrics.FollowersCount, user.PublicMetrics.FollowingCount, user.PublicMetrics.TweetCount,
+
+		pq.Array([]int64{}),
+	}, nil
+}
+
+func addUsers(db *sql.DB, users []User) error {
+	// 1. check duplicates
+
+	userids := useridsFromUsers(users)
+
+	dups, err := duplicates(db, userids)
+	users = removeDuplicates(dups, users)
+
+	// 2. add users which are not duplicates
 	txn, err := db.Begin()
 	if err != nil {
 		return err
@@ -182,14 +217,13 @@ func addUsers(db *sql.DB, users []User) error {
 	}
 
 	for _, user := range users {
-		_, err := stmt.Exec(
-			user.ID, user.Name, user.Username, user.URL, user.Description,
+		values, err := dbUser(user)
+		if err != nil {
+			log.Printf("%s", err)
+			continue
+		}
 
-			user.Location, user.CreatedAt, user.PinnedTweetID, user.Protected, user.Verified,
-			user.PublicMetrics.FollowersCount, user.PublicMetrics.FollowingCount, user.PublicMetrics.TweetCount,
-
-			pq.Array([]int64{}),
-		)
+		_, err = stmt.Exec(values...)
 
 		if err != nil {
 			return err
@@ -231,13 +265,32 @@ func main() {
 	client := http.Client{}
 	gen := tweets(client, bearer)
 	for tweet := range gen {
-		var users []User
-		for _, user := range tweet.Includes.Users {
-			users = append(users, user)
+		start := time.Now()
+
+		var tweets []Tweet
+		tweets = append(tweets, tweet.Data.asTweet())
+		for _, tweet := range tweet.Includes.Tweets {
+			tweets = append(tweets, tweet)
 		}
+
+		if err := addTweets(db, tweets); err != nil {
+			log.Fatal(err)
+		}
+
+		var users []User
+
+		for _, user := range tweet.Includes.Users {
+			user.id, err = strconv.ParseInt(user.ID, 10, 64)
+			if err == nil && user.id != 0 {
+				users = append(users, user)
+			}
+		}
+
 		if err := addUsers(db, users); err != nil {
 			log.Fatal(err)
 		}
+
+		log.Printf("tweet processing took %s", time.Since(start))
 	}
 
 }
@@ -250,8 +303,10 @@ func getenv(name string) string {
 	return val
 }
 
-// "generics are too complicated for small brained go programmers" - rob pike
-func remove(s []int64, i int) []int64 {
-	s[i] = s[len(s)-1]
-	return s[:len(s)-1]
+func useridsFromUsers(users []User) []int64 {
+	userids := make([]int64, len(users))
+	for _, user := range users {
+		userids = append(userids, user.id)
+	}
+	return userids
 }
