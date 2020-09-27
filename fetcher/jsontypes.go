@@ -1,6 +1,8 @@
 package main
 
-import "time"
+import (
+	"time"
+)
 
 // TweetTopLevel ...
 type TweetTopLevel struct {
@@ -42,12 +44,16 @@ type Data struct {
 	Lang              string             `json:"lang"`
 	ConversationID    string             `json:"conversation_id"`
 	ID                string             `json:"id"`
+	id                int64
 }
 
-func (d Data) asTweet() Tweet {
+func (d *Data) asTweet() Tweet {
+	d.id = parseID(d.ID)
+
 	return Tweet{
 		d.Source,
 		d.CreatedAt,
+		d.InReplyToUserID,
 		d.PossiblySensitive,
 		d.Text,
 		d.AuthorID,
@@ -55,8 +61,8 @@ func (d Data) asTweet() Tweet {
 		d.Lang,
 		d.ConversationID,
 		d.ID,
+		d.id,
 	}
-
 }
 
 // PublicMetricsUser ...
@@ -102,6 +108,7 @@ type User struct {
 type Tweet struct {
 	Source            string             `json:"source"`
 	CreatedAt         time.Time          `json:"created_at"`
+	InReplyToUserID   string             `json:"in_reply_to_user_id"`
 	PossiblySensitive bool               `json:"possibly_sensitive"`
 	Text              string             `json:"text"`
 	AuthorID          string             `json:"author_id"`
@@ -109,6 +116,7 @@ type Tweet struct {
 	Lang              string             `json:"lang"`
 	ConversationID    string             `json:"conversation_id"`
 	ID                string             `json:"id"`
+	id                int64              // we parse ID to int64 in code.
 }
 
 // Includes ...

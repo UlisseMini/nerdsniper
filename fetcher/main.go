@@ -41,10 +41,7 @@ func init() {
 func tweetsRequest(client http.Client, bearer string) (*http.Response, error) {
 	headers := http.Header{"Authorization": {"Bearer " + bearer}}
 
-	u, err := url.Parse("https://api.twitter.com/2/tweets/sample/stream")
-	if err != nil {
-		log.Fatal(err) // unreachable, static url is parsable ^
-	}
+	u, _ := url.Parse("https://api.twitter.com/2/tweets/sample/stream")
 	values := u.Query()
 	for k, p := range params {
 		values.Add(k, p[0])
@@ -86,6 +83,7 @@ func tweets(client http.Client, bearer string) <-chan TweetTopLevel {
 				log.Print(err)
 				break
 			}
+			log.Printf("connected to twitter API")
 
 			s := bufio.NewScanner(resp.Body)
 			for s.Scan() {
@@ -126,9 +124,11 @@ func connectToDB() (*sql.DB, error) {
 
 }
 
-func duplicates(db *sql.DB, userids []int64) (map[int64]bool, error) {
-	query := `SELECT id FROM users WHERE id = ANY($1)`
-	rows, err := db.Query(query, pq.Array(userids))
+func duplicates(db *sql.DB, table string, ids []int64) (map[int64]bool, error) {
+	// table is not user supplied, so this is safe. (and I don't think $1 would work with a table)
+	query := fmt.Sprintf(`SELECT id FROM %s WHERE id = ANY($1)`, table)
+
+	rows, err := db.Query(query, pq.Array(ids))
 	if err != nil {
 		return nil, err
 	}
@@ -149,103 +149,6 @@ func duplicates(db *sql.DB, userids []int64) (map[int64]bool, error) {
 	}
 
 	return dups, nil
-}
-
-func removeDuplicates(dups map[int64]bool, users []User) []User {
-	i := 0 // output index
-	for _, user := range users {
-		if !dups[user.id] {
-			users[i] = user
-			i++
-
-			// if the user shows up again, they are a duplicate.
-			// we need this since users can post comments on their own tweets.
-			dups[user.id] = true
-		}
-	}
-
-	// if this leaks memory i'm suing google
-	log.Printf("users before: %#v", useridsFromUsers(users))
-	users = users[:i]
-	log.Printf("users after: %#v", useridsFromUsers(users))
-	log.Printf("dups: %#v", dups)
-	return users
-}
-
-// userColumns MUST STAY IN SYNC with ./db.sql
-// todo: go generate this?
-var userColumns = []string{ // constant
-	"id", "name", "username", "url", "description",
-	"location", "created_at", "pinned_tweet_id", "protected", "verified",
-	"followers_count", "following_count", "tweet_count",
-
-	"tweets",
-}
-
-func dbUser(user User) (values []interface{}, err error) {
-	pinnedTweetID := sql.NullInt64{}
-	pinnedTweetID.Int64, err = strconv.ParseInt(user.PinnedTweetID, 10, 64)
-	pinnedTweetID.Valid = err == nil
-
-	return []interface{}{
-		user.id, user.Name, user.Username, user.URL, user.Description,
-
-		user.Location, user.CreatedAt, pinnedTweetID, user.Protected, user.Verified,
-		user.PublicMetrics.FollowersCount, user.PublicMetrics.FollowingCount, user.PublicMetrics.TweetCount,
-
-		pq.Array([]int64{}),
-	}, nil
-}
-
-func addUsers(db *sql.DB, users []User) error {
-	// 1. check duplicates
-
-	userids := useridsFromUsers(users)
-
-	dups, err := duplicates(db, userids)
-	users = removeDuplicates(dups, users)
-
-	// 2. add users which are not duplicates
-	txn, err := db.Begin()
-	if err != nil {
-		return err
-	}
-
-	stmt, err := txn.Prepare(pq.CopyIn("users", userColumns...))
-	if err != nil {
-		return err
-	}
-
-	for _, user := range users {
-		values, err := dbUser(user)
-		if err != nil {
-			log.Printf("%s", err)
-			continue
-		}
-
-		_, err = stmt.Exec(values...)
-
-		if err != nil {
-			return err
-		}
-	}
-
-	_, err = stmt.Exec()
-	if err != nil {
-		return err
-	}
-
-	err = stmt.Close()
-	if err != nil {
-		return err
-	}
-
-	return txn.Commit()
-
-}
-
-func addTweets(db *sql.DB, tweets []Tweet) error {
-	return nil
 }
 
 func main() {
@@ -270,7 +173,13 @@ func main() {
 		var tweets []Tweet
 		tweets = append(tweets, tweet.Data.asTweet())
 		for _, tweet := range tweet.Includes.Tweets {
-			tweets = append(tweets, tweet)
+			tweet.id = parseID(tweet.ID)
+
+			// ignore tweets where parsing id failed.
+			if tweet.id != 0 {
+				tweets = append(tweets, tweet)
+			}
+
 		}
 
 		if err := addTweets(db, tweets); err != nil {
@@ -280,8 +189,9 @@ func main() {
 		var users []User
 
 		for _, user := range tweet.Includes.Users {
-			user.id, err = strconv.ParseInt(user.ID, 10, 64)
-			if err == nil && user.id != 0 {
+			user.id = parseID(user.ID)
+			// ignore users where parsing id failed.
+			if user.id != 0 {
 				users = append(users, user)
 			}
 		}
@@ -290,7 +200,7 @@ func main() {
 			log.Fatal(err)
 		}
 
-		log.Printf("tweet processing took %s", time.Since(start))
+		// log.Printf("tweet processing took %s", time.Since(start))
 	}
 
 }
@@ -303,10 +213,7 @@ func getenv(name string) string {
 	return val
 }
 
-func useridsFromUsers(users []User) []int64 {
-	userids := make([]int64, len(users))
-	for _, user := range users {
-		userids = append(userids, user.id)
-	}
-	return userids
+func parseID(id string) int64 {
+	num, _ := strconv.ParseInt(id, 10, 64)
+	return num
 }
