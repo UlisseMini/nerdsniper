@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strings"
 	"time"
 
 	"strconv"
@@ -73,36 +74,45 @@ func tweetsRequest(client http.Client, bearer string) (*http.Response, error) {
 
 }
 
+func tweetsDaemon(client http.Client, bearer string, c chan<- TweetTopLevel) {
+	resp, err := tweetsRequest(client, bearer)
+	if err != nil {
+		log.Print(err)
+		return
+	}
+	defer resp.Body.Close()
+	log.Printf("connected to twitter API")
+
+	s := bufio.NewScanner(resp.Body)
+	for s.Scan() {
+		if strings.TrimSpace(s.Text()) == "" {
+			continue
+		}
+
+		t := TweetTopLevel{}
+
+		err := json.Unmarshal(s.Bytes(), &t)
+		if err != nil {
+			log.Printf("Failed json parse: %v\n", err)
+			log.Printf("json: %s", s.Bytes())
+
+			continue
+		}
+
+		c <- t
+	}
+}
+
 func tweets(client http.Client, bearer string) <-chan TweetTopLevel {
 	c := make(chan TweetTopLevel)
 
 	go func() {
 		for {
-			resp, err := tweetsRequest(client, bearer)
-			if err != nil {
-				log.Print(err)
-				break
-			}
-			log.Printf("connected to twitter API")
+			tweetsDaemon(client, bearer, c)
 
-			s := bufio.NewScanner(resp.Body)
-			for s.Scan() {
-				t := TweetTopLevel{}
-
-				err := json.Unmarshal(s.Bytes(), &t)
-				if err != nil {
-					fmt.Fprintf(os.Stderr, "Failed json parse: %v\n", err)
-					continue
-				}
-
-				c <- t
-			}
-
-			resp.Body.Close()
+			// Retry every 10s
+			time.Sleep(time.Second * 10)
 		}
-
-		// Retry in 10s
-		time.Sleep(time.Second * 10)
 	}()
 
 	return c
@@ -151,6 +161,20 @@ func duplicates(db *sql.DB, table string, ids []int64) (map[int64]bool, error) {
 	return dups, nil
 }
 
+func tweetsMult(client http.Client, bearers []string) <-chan TweetTopLevel {
+	c := make(chan TweetTopLevel)
+
+	for _, bearer := range bearers {
+		go func(bearer string) {
+			for t := range tweets(client, bearer) {
+				c <- t
+			}
+		}(bearer)
+	}
+
+	return c
+}
+
 func main() {
 	db, err := connectToDB()
 	if err != nil {
@@ -164,10 +188,20 @@ func main() {
 	}
 	log.Printf("Connected to %s@%s:%d/%s", user, host, port, dbname)
 
-	bearer := getenv("BEARER_TOKEN")
+	bearers := strings.Split(getenv("BEARER_TOKENS"), ",")
+
 	client := http.Client{}
-	gen := tweets(client, bearer)
+	gen := tweetsMult(client, bearers)
+
+	numTweets := 0
+	numUsers := 0
+	numIter := 0
+
 	for tweet := range gen {
+		if numIter%1000 == 0 {
+			log.Printf("tweet_toplevel: %d, users: %d tweets: %d", numIter, numUsers, numTweets)
+		}
+
 		var tweets []Tweet
 		tweets = append(tweets, tweet.Data.asTweet())
 		for _, tweet := range tweet.Includes.Tweets {
@@ -197,6 +231,10 @@ func main() {
 		if err := addUsers(db, users); err != nil {
 			log.Fatal(err)
 		}
+
+		numTweets += len(tweets)
+		numUsers += len(users)
+		numIter++
 	}
 
 }
