@@ -24,19 +24,19 @@ CREATE TABLE users (
 );
 
 CREATE TABLE tweets (
-	text varchar,
-	id bigint,
-	author_id bigint,
-	created_at varchar,
+	text                varchar,
+	id                  bigint,
+	author_id           bigint,
+	created_at          varchar,
 	in_reply_to_user_id bigint,
-	lang varchar,
-	retweet_count integer,
-	reply_count integer,
-	like_count integer,
-	quote_count integer,
-	possibly_sensitive boolean,
-	conversation_id bigint,
-	source varchar
+	lang                varchar,
+	retweet_count       integer,
+	reply_count         integer,
+	like_count          integer,
+	quote_count         integer,
+	possibly_sensitive  boolean,
+	conversation_id     bigint,
+	source              varchar
 );
 
 CREATE UNIQUE INDEX userids ON users (id);
