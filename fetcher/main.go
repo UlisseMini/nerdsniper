@@ -168,8 +168,6 @@ func main() {
 	client := http.Client{}
 	gen := tweets(client, bearer)
 	for tweet := range gen {
-		start := time.Now()
-
 		var tweets []Tweet
 		tweets = append(tweets, tweet.Data.asTweet())
 		for _, tweet := range tweet.Includes.Tweets {
@@ -199,8 +197,6 @@ func main() {
 		if err := addUsers(db, users); err != nil {
 			log.Fatal(err)
 		}
-
-		// log.Printf("tweet processing took %s", time.Since(start))
 	}
 
 }
