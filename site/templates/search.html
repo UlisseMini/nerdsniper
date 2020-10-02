@@ -9,7 +9,13 @@
 </head>
 
 <body>
+	<header>
+		<h1>Nerdsniper</h1>
+		<footer><i>{{motto}}</i></footer>
+	</header>
+
   <main>
+
     <form action="/search" method="get" class="search-form">
 			<input type="search" name="q" class="search-box" value="{{ search }}" required>
     </form>
@@ -21,6 +27,14 @@
       <div class="bio">{{ user.description }}</div>
     </div>
     {% endfor %}
+
+		{% if num_results == PAGE_SIZE %}
+		<ul>
+				{% for n in range(1, page+3) %}
+					<li><a href="/search?q={{search}}&page={{n}}">{{n}}</a></li>
+				{% endfor %}
+		</ul>
+		{% endif %}
   </main>
 </body>
 

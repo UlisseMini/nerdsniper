@@ -16,6 +16,21 @@ main, header {
 	max-width: 600px;
 }
 
+ul {
+	list-style-type: none;
+	text-align: center;
+}
+
+ul li {
+	display: inline;
+	margin: 4px;
+	font-size: 20px;
+}
+
+a { text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+
 .search-box {
 	font-size: 1.1em;
 	padding-left: 8px;
