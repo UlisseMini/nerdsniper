@@ -19,6 +19,7 @@ MOTTOS = [
     "because we're all so alone",
     "how many days till I feel something again?",
     "i profit from your loneliness",
+    "the home of friendly cyberstalkers"
 ]
 
 # n is serial.
@@ -114,6 +115,13 @@ async def timings_api():
     global timings
     return timings
 
+
+@app.get('/', response_class=HTMLResponse)
+async def index(request: Request):
+    return templates.TemplateResponse('home.html', {
+        'motto': random.choice(MOTTOS),
+        'request': request,
+    })
 
 
 app.mount('/',  StaticFiles(directory='./static', html=True))
