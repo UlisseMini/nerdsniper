@@ -1,24 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
 
-<head>
-  <title>nerdsniper</title>
-  <link rel="stylesheet" href="/styles.css">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-	<!-- <script src="/main.js"></script> -->
-</head>
+{% include "head.html" %}
 
 <body>
-	<header>
-		<h1>Nerdsniper</h1>
-		<footer><i>{{motto}}</i></footer>
-	</header>
+{% include "header.html" %}
 
-  <main>
-    <form action="/search" method="get" class="search-form">
-			<input type="search" name="q" class="search-box" required>
-    </form>
-  </main>
+<main>
+{% include "form.html" %}
+</main>
+
 </body>
-
 </html>
