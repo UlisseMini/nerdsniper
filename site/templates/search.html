@@ -10,7 +10,7 @@
 
 <body>
 	<header>
-		<h1>Nerdsniper</h1>
+		<h1><a href="/">Nerdsniper</a></h1>
 		<footer><i>{{motto}}</i></footer>
 	</header>
 
@@ -22,9 +22,9 @@
 
     {% for user in users %}
     <div class="result">
-      <span class="name">{{ user.name }}</span>
-      <a class="username" href="https://twitter.com/{{ user.username }}">{{ user.username }}</a>
-      <div class="bio">{{ user.description }}</div>
+      <span class="name">{{ user.name|e }}</span>
+      <a class="username" href="https://twitter.com/{{ user.username|e }}">{{ user.username|e }}</a>
+      <div class="bio">{{ user.description|e }}</div>
     </div>
     {% endfor %}
 
