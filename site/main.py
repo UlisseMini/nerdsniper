@@ -30,8 +30,8 @@ MOTTOS = [
 SEARCH_SQL = f'''
 SELECT id, username, name, description
 FROM users
-WHERE textsearchable @@ plainto_tsquery($1)
-AND id > $2
+WHERE id > $2
+AND textsearchable @@ plainto_tsquery($1)
 ORDER BY id+0 asc
 LIMIT $3
 '''.strip()
