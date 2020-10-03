@@ -101,6 +101,8 @@ func tweetsDaemon(client http.Client, bearer string, c chan<- TweetTopLevel) {
 
 		c <- t
 	}
+	log.Print("End of stream, wtf twitter?")
+	log.Printf("Error: %v", s.Err())
 }
 
 func tweets(client http.Client, bearer string) <-chan TweetTopLevel {
@@ -110,8 +112,8 @@ func tweets(client http.Client, bearer string) <-chan TweetTopLevel {
 		for {
 			tweetsDaemon(client, bearer, c)
 
-			// Retry every 10s
-			time.Sleep(time.Second * 10)
+			// retry every minute
+			time.Sleep(time.Minute)
 		}
 	}()
 
