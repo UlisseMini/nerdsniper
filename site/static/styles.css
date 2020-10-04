@@ -33,14 +33,10 @@ main, header {
 	max-width: 600px;
 }
 
-ul {
-	list-style-type: none;
+.next-page {
 	text-align: center;
-}
-
-ul li {
-	display: inline;
-	margin: 4px;
+	margin-top: 16px;
+	display: block; /* a tag cannot be repositioned */
 	font-size: 20px;
 }
 

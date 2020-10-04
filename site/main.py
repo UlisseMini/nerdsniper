@@ -58,46 +58,32 @@ async def shutdown():
     await pool.close()
 
 
-# note: page is 1 indexed.
-async def search(q: str, page: int):
+# page_ptr is the largest index from the previous page.
+async def search(q: str, page_ptr: int):
     async with pool.acquire() as conn:
-        # TODO: I could build a query depending on page size then
-        # exec all this work on the db without comm overhead
-        max_id = 0
-        for _ in range(1, page):
-            values = await conn.fetch(SEARCH_SQL, q, max_id, PAGE_SIZE)
-
-            # if this page (before wanted page) has < PAGE_SIZE values
-            # we can't have any for the next page.
-            if len(values) < PAGE_SIZE:
-                return []
-
-            max_id = max(v['id'] for v in values)
-
-
-        print(max_id)
-        values = await conn.fetch(SEARCH_SQL, q, max_id, PAGE_SIZE)
+        values = await conn.fetch(SEARCH_SQL, q, page_ptr, PAGE_SIZE)
     return values
 
 
 @app.get('/search', response_class=HTMLResponse)
-async def search_html(request: Request, q: str, page: int = 1):
+async def search_html(request: Request, q: str, ptr: int = 0):
     global timings
 
     start = time.time()
-    values = await search(q, page)
+    values = await search(q, ptr)
     timings['db'] += time.time() - start
 
+    page_ptr = values[-1]['id']
 
     start = time.time()
     rendered = templates.TemplateResponse('search.html', {
         'users': values,
-        'page': page,
         'num_results': len(values),
         'PAGE_SIZE': PAGE_SIZE,
         'request': request,
         'motto': random.choice(MOTTOS),
         'search': q,
+        'ptr': page_ptr,
     })
     timings['jinja'] += time.time() - start
 
@@ -106,8 +92,8 @@ async def search_html(request: Request, q: str, page: int = 1):
 
 
 @app.get('/api/search')
-async def search_api(q: str, page: int = 1):
-    return await search(q, page)
+async def search_api(q: str, ptr: int = 0):
+    return await search(q, page, ptr)
 
 
 @app.get('/api/timings')
