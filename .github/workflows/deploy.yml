@@ -21,11 +21,21 @@ jobs:
         source: "."
         target: "~/nerdsniper"
 
-    - name: Executing remote command
+    - name: Rebuilding the fetcher
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.HOST }}
+        USERNAME: ${{ secrets.USERNAME }}
+        PORT: ${{ secrets.PORT }}
+        KEY: ${{ secrets.SSHKEY }}
+        script: cd ~/nerdsniper/fetcher; go build
+
+
+    - name: Restarting the web server and fetcher daemon
       uses: appleboy/ssh-action@master
       with:
         host: ${{ secrets.HOST }}
         USERNAME: root
         PORT: ${{ secrets.PORT }}
         KEY: ${{ secrets.SSHKEY }}
-        script: systemctl restart web
+        script: systemctl restart web fetcher
