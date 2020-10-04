@@ -58,7 +58,7 @@ async def shutdown():
     await pool.close()
 
 
-#j note: page is 1 indexed.
+# note: page is 1 indexed.
 async def search(q: str, page: int):
     async with pool.acquire() as conn:
         # TODO: I could build a query depending on page size then
