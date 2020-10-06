@@ -33,6 +33,11 @@ main, header {
 	max-width: 600px;
 }
 
+/* Footer might be a bad pick, Perhaps I'll use classes and divs later. */
+footer {
+	font-style: italic;
+}
+
 .next-page {
 	text-align: center;
 	margin-top: 16px;
