@@ -12,7 +12,7 @@ import asyncpg as pg
 app = FastAPI()
 
 # number of results per page.
-PAGE_SIZE = 20
+PAGE_SIZE = 100
 
 MOTTOS = [
     "when you don't have friends, snipe them",
@@ -22,18 +22,21 @@ MOTTOS = [
     "the home of friendly cyberstalkers"
 ]
 
-# n is serial.
-# $2 is the largest id from the last page
-# note: if you change asc to desc you must change search() aswell
 # id+0 forces postgres to be big brained and use the index
 # otherwise it would use a backward scan for some reason
+# TODO: would be nice to avoid the double compute for plainto_tsquery()
 SEARCH_SQL = f'''
+WITH results AS (
+  SELECT id, username, name, description, textsearchable
+
+  FROM users
+  WHERE textsearchable @@ plainto_tsquery($1)
+  LIMIT $2
+)
+
 SELECT id, username, name, description
-FROM users
-WHERE id > $2
-AND textsearchable @@ plainto_tsquery($1)
-ORDER BY id+0 asc
-LIMIT $3
+FROM results
+ORDER BY ts_rank(textsearchable, plainto_tsquery($1))
 '''.strip()
 
 templates = Jinja2Templates(directory="templates")
@@ -58,22 +61,19 @@ async def shutdown():
     await pool.close()
 
 
-# page_ptr is the largest index from the previous page.
-async def search(q: str, page_ptr: int):
+async def search(q: str):
     async with pool.acquire() as conn:
-        values = await conn.fetch(SEARCH_SQL, q, page_ptr, PAGE_SIZE)
+        values = await conn.fetch(SEARCH_SQL, q, PAGE_SIZE)
     return values
 
 
 @app.get('/search', response_class=HTMLResponse)
-async def search_html(request: Request, q: str, ptr: int = 0):
+async def search_html(request: Request, q: str):
     global timings
 
     start = time.time()
-    values = await search(q, ptr)
+    values = await search(q)
     timings['db'] += time.time() - start
-
-    page_ptr = values[-1]['id']
 
     start = time.time()
     rendered = templates.TemplateResponse('search.html', {
@@ -83,7 +83,6 @@ async def search_html(request: Request, q: str, ptr: int = 0):
         'request': request,
         'motto': random.choice(MOTTOS),
         'search': q,
-        'ptr': page_ptr,
     })
     timings['jinja'] += time.time() - start
 
@@ -92,8 +91,8 @@ async def search_html(request: Request, q: str, ptr: int = 0):
 
 
 @app.get('/api/search')
-async def search_api(q: str, ptr: int = 0):
-    return await search(q, page, ptr)
+async def search_api(q: str):
+    return await search(q, page)
 
 
 @app.get('/api/timings')

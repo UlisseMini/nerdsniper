@@ -20,10 +20,6 @@
 	{% if num_results == 0 %}
 		<p><i>No results, You're doomed to be forever alone</i></p>
 	{% endif %}
-
-	{% if num_results == PAGE_SIZE %}
-	<a href="/search?q={{search}}&ptr={{ptr}}" class="next-page">Next page</a>
-	{% endif %}
 </main>
 
 </body>
