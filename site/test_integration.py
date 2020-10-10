@@ -26,7 +26,10 @@ def stop_server(proc):
 class TestWebsite(unittest.TestCase):
     def setUp(self):
         self.server = start_server()
-        self.driver = webdriver.Chrome()
+
+        options = webdriver.ChromeOptions()
+        options.headless = True
+        self.driver = webdriver.Chrome(options=options)
 
 
     def test_title(self):
