@@ -91,3 +91,7 @@ a:hover { text-decoration: underline; }
 .result {
 	margin-top: 16px;
 }
+
+.strike {
+	text-decoration: line-through;
+}

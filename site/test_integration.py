@@ -1,8 +1,10 @@
 from main import *
 from selenium import webdriver
 import unittest
+import requests
 
 PORT = 5000
+URL = f'http://localhost:{PORT}'
 
 def run_server():
     import uvicorn
@@ -22,6 +24,9 @@ def stop_server(proc):
     proc.close()
 
 
+# NOTE: Currently this works because the server has time to start
+# while we load the webdriver, This is a terrible approch but works
+# for now. Later I'll make sure the server started.
 def setUpModule():
     global driver
     global server
@@ -42,9 +47,28 @@ def tearDownModule():
 
 
 
-class TestWebsite(unittest.TestCase):
+
+
+class TestAbout(unittest.TestCase):
     def setUp(self):
-        driver.get(f'http://localhost:{PORT}')
+        self.url = f'{URL}/about'
+        driver.get(self.url)
+
+
+    def test_found(self):
+        r = requests.get(self.url)
+        self.assertEqual(200, r.status_code)
+
+
+    def test_title(self):
+        self.assertIn("nerdsniper", driver.title)
+
+
+
+
+class TestHome(unittest.TestCase):
+    def setUp(self):
+        driver.get(URL)
 
 
     def test_title(self):

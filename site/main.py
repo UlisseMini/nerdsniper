@@ -109,5 +109,13 @@ async def index(request: Request):
     })
 
 
-app.mount('/',  StaticFiles(directory='./static', html=True))
+
+@app.get('/about', response_class=HTMLResponse)
+async def about(request: Request):
+    return templates.TemplateResponse('about.html', {
+        'request': request,
+    })
+
+
+app.mount('/',  StaticFiles(directory='./static'))
 
