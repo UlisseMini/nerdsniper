@@ -22,25 +22,39 @@ def stop_server(proc):
     proc.close()
 
 
+def setUpModule():
+    global driver
+    global server
+
+    server = start_server()
+
+    options = webdriver.ChromeOptions()
+    options.headless = True
+    driver = webdriver.Chrome(options=options)
+
+
+def tearDownModule():
+    global driver
+    global server
+
+    driver.close()
+    stop_server(server)
+
+
 
 class TestWebsite(unittest.TestCase):
     def setUp(self):
-        self.server = start_server()
-
-        options = webdriver.ChromeOptions()
-        options.headless = True
-        self.driver = webdriver.Chrome(options=options)
+        driver.get(f'http://localhost:{PORT}')
 
 
     def test_title(self):
-        driver = self.driver
-        driver.get(f'http://localhost:{PORT}')
         self.assertIn("nerdsniper", driver.title)
 
 
-    def tearDown(self):
-        self.driver.close()
-        stop_server(self.server)
+    def test_search_exists(self):
+        element = driver.find_element_by_tag_name('input')
+        typ = element.get_attribute('type')
+        self.assertEqual('search', typ)
 
 
 
