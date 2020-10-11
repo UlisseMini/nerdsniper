@@ -53,18 +53,22 @@ def tearDownModule():
 
 
 class TestAbout(unittest.TestCase):
-    def setUp(self):
-        self.url = f'{URL}/about'
-        driver.get(self.url)
-
+    ABOUT_URL = f'{URL}/about'
 
     def test_found(self):
-        r = requests.get(self.url)
+        r = requests.get(self.ABOUT_URL)
         self.assertEqual(200, r.status_code)
 
 
     def test_title(self):
+        driver.get(self.ABOUT_URL)
         self.assertIn("nerdsniper", driver.title)
+
+
+    def test_link_on_homepage(self):
+        driver.get(URL)
+        about_link = driver.find_element_by_css_selector('a[href*="about"]')
+        self.assertNotEqual(None, about_link)
 
 
 
@@ -102,6 +106,7 @@ class TestHome(unittest.TestCase):
         element = driver.find_element_by_tag_name('input')
         typ = element.get_attribute('type')
         self.assertEqual('search', typ)
+
 
 
 
