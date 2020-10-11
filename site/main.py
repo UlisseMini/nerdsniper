@@ -4,6 +4,7 @@ from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 import random
 import time
+import os
 
 import asyncpg as pg
 
@@ -50,9 +51,9 @@ timings = {
 async def startup():
     global pool
     pool = await pg.create_pool(
-        user='postgres',
-        password='postgres',
-        database='postgres',
+        user=os.environ['PG_USER'],
+        password=os.environ['PG_PASS'],
+        database=os.environ['PG_DB'],
     )
 
 
