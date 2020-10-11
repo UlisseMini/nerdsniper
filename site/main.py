@@ -18,7 +18,7 @@ PAGE_SIZE = 100
 MOTTOS = [
     "when you don't have friends, snipe them",
     "because we're all so alone",
-    "how many days till I feel something again?",
+    "privacy is dead",
     "i profit from your loneliness",
     "the home of friendly cyberstalkers"
 ]
