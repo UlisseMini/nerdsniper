@@ -1,7 +1,12 @@
 from main import *
-from selenium import webdriver
 import unittest
 import requests
+
+from selenium import webdriver
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.common.by import By
 
 PORT = 5000
 URL = f'http://localhost:{PORT}'
@@ -47,8 +52,6 @@ def tearDownModule():
 
 
 
-
-
 class TestAbout(unittest.TestCase):
     def setUp(self):
         self.url = f'{URL}/about'
@@ -62,6 +65,26 @@ class TestAbout(unittest.TestCase):
 
     def test_title(self):
         self.assertIn("nerdsniper", driver.title)
+
+
+
+class TestSearch(unittest.TestCase):
+    def search_test(self, query):
+        e = driver.find_element_by_css_selector('input[type="search"]')
+        e.send_keys(query)
+        e.send_keys(Keys.RETURN)
+        results = WebDriverWait(driver, 5).until(
+            EC.visibility_of_all_elements_located((By.CSS_SELECTOR, '.result'))
+        )
+
+        for i, result in zip(range(1, 10), results):
+            self.assertIn(query, result.text.lower())
+
+
+    def test_search(self):
+        driver.get(URL)
+        self.search_test('foo')
+        self.search_test('bar')
 
 
 
