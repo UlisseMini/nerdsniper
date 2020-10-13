@@ -36,10 +36,11 @@ def setUpModule():
     global driver
     global server
 
-    # server = start_server()
+    server = start_server()
 
     options = webdriver.ChromeOptions()
     options.headless = True
+    options.add_argument('--no-sandbox')
     driver = webdriver.Chrome(options=options)
 
 
@@ -48,7 +49,7 @@ def tearDownModule():
     global server
 
     driver.close()
-    # stop_server(server)
+    stop_server(server)
 
 
 

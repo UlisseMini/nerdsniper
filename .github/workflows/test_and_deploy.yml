@@ -3,9 +3,31 @@ name: Deploy
 on: [push]
 
 jobs:
-  build:
-
+  tests:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:12.4
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_DB: postgres
+          POSTGRES_PASSWORD: ""
+        ports: ["5432:5432"]
+
+    steps:
+      - uses: actions/checkout@v1
+
+      - uses: actions/setup-python@v2
+        with:
+          python-version: "3.8.x"
+
+
+      - run: cd site && python test_integration.py
+
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: tests
 
     steps:
     - uses: actions/checkout@v1
