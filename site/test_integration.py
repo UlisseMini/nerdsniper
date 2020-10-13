@@ -8,7 +8,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.by import By
 
-PORT = 5000
+PORT = 8000
 URL = f'http://localhost:{PORT}'
 
 def run_server():
@@ -36,7 +36,7 @@ def setUpModule():
     global driver
     global server
 
-    server = start_server()
+    # server = start_server()
 
     options = webdriver.ChromeOptions()
     options.headless = True
@@ -48,7 +48,7 @@ def tearDownModule():
     global server
 
     driver.close()
-    stop_server(server)
+    # stop_server(server)
 
 
 
@@ -83,6 +83,15 @@ class TestSearch(unittest.TestCase):
 
         for i, result in zip(range(1, 10), results):
             self.assertIn(query, result.text.lower())
+
+        e = driver.find_element_by_css_selector('input[type="search"]')
+
+        # check that query remains after search
+        self.assertEqual(query, e.get_attribute('value'))
+
+        # clear the input for the next test
+        e.clear()
+
 
 
     def test_search(self):
