@@ -11,6 +11,9 @@ from selenium.webdriver.common.by import By
 PORT = 8000
 URL = f'http://localhost:{PORT}'
 
+ABOUT_URL = f'{URL}/about'
+SEARCH_URL = f'{URL}/search'
+
 def run_server():
     import uvicorn
     uvicorn.run("main:app", host="127.0.0.1", port=PORT, log_level="warning")
@@ -53,16 +56,29 @@ def tearDownModule():
 
 
 
-class TestAbout(unittest.TestCase):
-    ABOUT_URL = f'{URL}/about'
-
-    def test_found(self):
-        r = requests.get(self.ABOUT_URL)
+# tests using requests instead of selenium.
+class TestFast(unittest.TestCase):
+    def test_about(self):
+        r = requests.get(ABOUT_URL)
         self.assertEqual(200, r.status_code)
+        self.assertIn('nerdsniper', r.text.lower())
+
+    def test_search(self):
+        r = requests.get(SEARCH_URL + '?q=foo')
+        self.assertEqual(200, r.status_code)
+        self.assertIn('nerdsniper', r.text.lower())
+        self.assertIn('foo', r.text.lower())
+
+    def test_home(self):
+        r = requests.get(URL)
+        self.assertEqual(200, r.status_code)
+        self.assertIn('nerdsniper', r.text.lower())
+        self.assertIn('about', r.text.lower())
 
 
+class TestAbout(unittest.TestCase):
     def test_title(self):
-        driver.get(self.ABOUT_URL)
+        driver.get(ABOUT_URL)
         self.assertIn("nerdsniper", driver.title)
 
 
