@@ -32,6 +32,7 @@ WITH results AS (
 
   FROM users
   WHERE textsearchable @@ plainto_tsquery($1)
+  AND followers_count < 500
   LIMIT $2
 )
 
