@@ -137,14 +137,20 @@ class TestSearch(unittest.TestCase):
         e = driver.find_element_by_css_selector('input[type="search"]')
 
 
-    def test_followers_no_results_small(self):
-        results = self.search_run('foo followers:<0')
-        self.assertEqual(results, [])
+    def test_no_mod_results_small(self):
+        for mod in ['tweets', 'followers', 'following']:
+            query = 'foo {}:<0'.format(mod)
+            with self.subTest(mod, query=query):
+                results = self.search_run(query)
+                self.assertEqual(results, [])
 
 
-    def test_followers_no_results_big(self):
-        results = self.search_run('foo followers:>100000000')
-        self.assertEqual(results, [])
+    def test_no_mod_results_big(self):
+        for mod in ['tweets', 'followers', 'following']:
+            query = 'foo {}:>100000000'.format(mod)
+            with self.subTest(mod, query=query):
+                results = self.search_run(query)
+                self.assertEqual(results, [])
 
 
     def test_search(self):

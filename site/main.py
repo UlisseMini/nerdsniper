@@ -6,6 +6,7 @@ import random
 import time
 import os
 from queryparser import parse_query, ParseError
+import queryparser
 
 import asyncpg as pg
 
@@ -100,6 +101,7 @@ async def timings_api():
 async def index(request: Request):
     return templates.TemplateResponse('home.html', {
         'motto': random.choice(MOTTOS),
+        'docs': queryparser.docs,
         'request': request,
     })
 
