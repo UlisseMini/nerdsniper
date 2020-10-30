@@ -88,7 +88,7 @@ async def search_html(request: Request, q: str):
 
 @app.get('/api/search')
 async def search_api(q: str):
-    return await search(q, page)
+    return await search(q)
 
 
 @app.get('/api/timings')
