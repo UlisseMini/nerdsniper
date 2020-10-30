@@ -7,6 +7,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.by import By
+from selenium.common.exceptions import NoSuchElementException
 
 PORT = 8000
 URL = f'http://localhost:{PORT}'
@@ -39,7 +40,7 @@ def setUpModule():
     global driver
     global server
 
-    server = start_server()
+    # server = start_server()
 
     options = webdriver.ChromeOptions()
     options.headless = True
@@ -52,7 +53,7 @@ def tearDownModule():
     global server
 
     driver.close()
-    stop_server(server)
+    # stop_server(server)
 
 
 
@@ -90,25 +91,60 @@ class TestAbout(unittest.TestCase):
 
 
 class TestSearch(unittest.TestCase):
-    def search_test(self, query):
+    def search_run(self, query):
         e = driver.find_element_by_css_selector('input[type="search"]')
         e.send_keys(query)
         e.send_keys(Keys.RETURN)
-        results = WebDriverWait(driver, 5).until(
+
+        WebDriverWait(driver, 5).until(
+            EC.visibility_of_element_located((By.CSS_SELECTOR, '.results'))
+        )
+
+        # check that query remains after search
+        e = driver.find_element_by_css_selector('input[type="search"]')
+        self.assertEqual(query, e.get_attribute('value'))
+
+        e.clear()
+
+
+        try:
+            err = driver.find_element_by_css_selector('#err')
+            raise ValueError('error element exists: ' + err.text)
+        except NoSuchElementException:
+            pass
+
+
+        try:
+            no_res = driver.find_element_by_css_selector('#no-res')
+            return []
+        except NoSuchElementException:
+            pass
+
+
+        results = WebDriverWait(driver, 1).until(
             EC.visibility_of_all_elements_located((By.CSS_SELECTOR, '.result'))
         )
+
+        return results
+
+
+    def search_test(self, query):
+        results = self.search_run(query)
 
         for i, result in zip(range(1, 10), results):
             self.assertIn(query, result.text.lower())
 
         e = driver.find_element_by_css_selector('input[type="search"]')
 
-        # check that query remains after search
-        self.assertEqual(query, e.get_attribute('value'))
 
-        # clear the input for the next test
-        e.clear()
+    def test_followers_no_results_small(self):
+        results = self.search_run('foo followers:<0')
+        self.assertEqual(results, [])
 
+
+    def test_followers_no_results_big(self):
+        results = self.search_run('foo followers:>100000000')
+        self.assertEqual(results, [])
 
 
     def test_search(self):

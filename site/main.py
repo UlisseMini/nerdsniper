@@ -5,15 +5,13 @@ from fastapi.staticfiles import StaticFiles
 import random
 import time
 import os
+from queryparser import parse_query, ParseError
 
 import asyncpg as pg
 
 # TODO: DDOS, I mean benchmark
 
 app = FastAPI()
-
-# number of results per page.
-PAGE_SIZE = 100
 
 MOTTOS = [
     "when you don't have friends, snipe them",
@@ -22,24 +20,6 @@ MOTTOS = [
     "i profit from your loneliness",
     "the home of friendly cyberstalkers"
 ]
-
-# id+0 forces postgres to be big brained and use the index
-# otherwise it would use a backward scan for some reason
-# TODO: would be nice to avoid the double compute for plainto_tsquery()
-SEARCH_SQL = f'''
-WITH results AS (
-  SELECT id, username, name, description, textsearchable
-
-  FROM users
-  WHERE textsearchable @@ plainto_tsquery($1)
-  AND followers_count < 500
-  LIMIT $2
-)
-
-SELECT id, username, name, description
-FROM results
-ORDER BY ts_rank(textsearchable, plainto_tsquery($1))
-'''.strip()
 
 templates = Jinja2Templates(directory="templates")
 
@@ -64,8 +44,14 @@ async def shutdown():
 
 
 async def search(q: str):
+    print('search', q)
+    sql, args = parse_query(q)
+
+    print(sql, args)
+
     async with pool.acquire() as conn:
-        values = await conn.fetch(SEARCH_SQL, q, PAGE_SIZE)
+        values = await conn.fetch(sql, *args)
+
     return values
 
 
@@ -74,17 +60,24 @@ async def search_html(request: Request, q: str):
     global timings
 
     start = time.time()
-    values = await search(q)
+    values = []
+    err = ""
+    try:
+        values = await search(q)
+    except ParseError as e:
+        print(e)
+        err = str(e)
+
     timings['db'] += time.time() - start
 
     start = time.time()
     rendered = templates.TemplateResponse('search.html', {
         'users': values,
         'num_results': len(values),
-        'PAGE_SIZE': PAGE_SIZE,
         'request': request,
         'motto': random.choice(MOTTOS),
         'search': q,
+        'err': err,
     })
     timings['jinja'] += time.time() - start
 

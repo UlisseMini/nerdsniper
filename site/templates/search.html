@@ -9,17 +9,21 @@
 <main>
 	{% include "form.html" %}
 
-	{% for user in users %}
-	<div class="result">
-		<span class="name">{{ user.name|e }}</span>
-		<a class="username" href="https://twitter.com/{{ user.username|e }}">{{ user.username|e }}</a>
-		<div class="bio">{{ user.description|e }}</div>
-	</div>
-	{% endfor %}
+	<div class="results">
+		{% for user in users %}
+		<div class="result">
+			<span class="name">{{ user.name|e }}</span>
+			<a class="username" href="https://twitter.com/{{ user.username|e }}">{{ user.username|e }}</a>
+			<div class="bio">{{ user.description|e }}</div>
+		</div>
+		{% endfor %}
 
-	{% if num_results == 0 %}
-		<p><i>No results, You're doomed to be forever alone</i></p>
-	{% endif %}
+		{% if err != "" %}
+			<p id="err">Error: <code>'{{ err }}'</code></p>
+		{% elif num_results == 0 %}
+			<p id="no-res"><i>No results, You're doomed to be forever alone</i></p>
+		{% endif %}
+	</div>
 </main>
 
 </body>
