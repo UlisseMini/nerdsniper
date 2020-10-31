@@ -80,6 +80,7 @@ def _gender(val, sql, where, conf = 0.7):
     """
 
     args = val.split(',')
+    args[0] = args[0].upper()
     if args[0] not in 'FM':
         raise ParseError('there are only two genders')
 

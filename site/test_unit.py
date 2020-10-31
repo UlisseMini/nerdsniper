@@ -30,5 +30,19 @@ class TestParser(unittest.TestCase):
         self.assertEqual(in_array, want)
 
 
+    def test_case_insensitive_M(self):
+        s1, a1 = queryparser.parse_query('bar gender:M')
+        s2, a2 = queryparser.parse_query('bar gender:m')
+        self.assertEqual(s1, s2)
+        self.assertEqual(a1, a2)
+
+    def test_case_insensitive_F(self):
+        s1, a1 = queryparser.parse_query('foo gender:F')
+        s2, a2 = queryparser.parse_query('foo gender:f')
+        self.assertEqual(s1, s2)
+        self.assertEqual(a1, a2)
+
+
+
 if __name__ == '__main__':
     unittest.main()
