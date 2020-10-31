@@ -28,7 +28,6 @@ def parse_query(*args, **kwargs):
 
 
 def parse_gt_le(val):
-    print(val)
     op = val[0]
     if op not in '><':
         raise ParseError('invalid operator: {} (valid are < and >)'.format(op))
