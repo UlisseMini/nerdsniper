@@ -3,14 +3,14 @@ WITH results AS (
   SELECT id, username, name, description, textsearchable
 
   FROM users
-  WHERE textsearchable @@ plainto_tsquery($1)
+  WHERE {search}
   {where}
   LIMIT {limit}
 )
 
 SELECT id, username, name, description
 FROM results
-ORDER BY ts_rank(textsearchable, plainto_tsquery($1))
+{orderby}
 '''.strip()
 
 LIMIT = 100
@@ -74,10 +74,46 @@ def _tweet_count(val, sql, where):
     return sql, where
 
 
+def _gender(val, sql, where, conf = 0.7):
+    """
+    gender:F or gender:M or gender:F,0.7
+    search for people based on predicted gender, optionally specify
+    how confident my algorithm should be. (default confidence: 0.7)
+    """
+
+    args = val.split(',')
+    if args[0] not in 'FM':
+        raise ParseError('there are only two genders')
+
+    if len(args) > 1:
+        conf = float(args[1])
+        if conf > 1 or conf < 0:
+            raise ParseError('confidence must be in range 0-1')
+
+
+    if args[0] == 'M':
+        conf = 1 - conf
+
+
+    # We do this cancerous dance because I coulden't figure out how to
+    # make ranges go fast, so we make our own fucking ranges
+    # (dtype in DB is numeric(2, 1))
+    any_of = []
+    if args[0] == 'F':
+        any_of = [x*0.1 for x in range(round(conf*10), 11)]
+    else:
+        any_of = [x*0.1 for x in range(0, round(conf*10) + 1)]
+
+
+    where += 'AND P_female IN ({})'.format(','.join(map(str, any_of)))
+    return sql, where
+
+
 modifiers = {
     'followers': _followers,
     'following': _following,
-    'tweets': _tweet_count
+    'tweets': _tweet_count,
+    'gender': _gender
 }
 
 # stur the soup of metaprogramming
@@ -118,6 +154,13 @@ def _parse_query(query: str) -> (str, str):
         if modifiers.get(stmt) is not None:
             sql, where = modifiers[stmt](val, sql, where)
 
+    search = 'textsearchable @@ plainto_tsquery($1)'
+    orderby = 'ORDER BY ts_rank(textsearchable, plainto_tsquery($1))'
+    args = [query_raw]
+    if query_raw.strip() == '':
+        search  = 'true' # true on all profiles
+        orderby = ''
+        args = []
 
 
-    return sql.format(limit=LIMIT, where=where), [query_raw]
+    return sql.format(limit=LIMIT, where=where, search=search, orderby=orderby), args
