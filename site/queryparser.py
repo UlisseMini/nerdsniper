@@ -105,7 +105,8 @@ def _gender(val, sql, where, conf = 0.7):
         any_of = [x*0.1 for x in range(0, round(conf*10) + 1)]
 
 
-    where += 'AND P_female IN ({})'.format(','.join(map(str, any_of)))
+    _s = lambda n: str(round(n, 1))
+    where += 'AND P_female IN ({})'.format(','.join(map(_s, any_of)))
     return sql, where
 
 
