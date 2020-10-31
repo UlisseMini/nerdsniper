@@ -3,8 +3,7 @@ WITH results AS (
   SELECT id, username, name, description, textsearchable
 
   FROM users
-  WHERE {search}
-  {where}
+  WHERE {search} {where}
   LIMIT {limit}
 )
 
@@ -48,7 +47,7 @@ def _followers(val, sql, where):
     """
 
     op, n = parse_gt_le(val)
-    where += 'AND followers_count {} {}'.format(op, n)
+    where += '\nAND followers_count {} {}'.format(op, n)
     return sql, where
 
 
@@ -59,7 +58,7 @@ def _following(val, sql, where):
     """
 
     op, n = parse_gt_le(val)
-    where += 'AND following_count {} {}'.format(op, n)
+    where += '\nAND following_count {} {}'.format(op, n)
     return sql, where
 
 def _tweet_count(val, sql, where):
@@ -69,7 +68,7 @@ def _tweet_count(val, sql, where):
     """
 
     op, n = parse_gt_le(val)
-    where += 'AND tweet_count {} {}'.format(op, n)
+    where += '\nAND tweet_count {} {}'.format(op, n)
     return sql, where
 
 
@@ -105,7 +104,7 @@ def _gender(val, sql, where, conf = 0.7):
 
 
     _s = lambda n: str(round(n, 1))
-    where += 'AND P_female IN ({})'.format(','.join(map(_s, any_of)))
+    where += '\nAND P_female IN ({})'.format(','.join(map(_s, any_of)))
     return sql, where
 
 
