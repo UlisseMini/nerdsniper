@@ -9,6 +9,8 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import NoSuchElementException
 
+import queryparser
+
 PORT = 8000
 URL = f'http://localhost:{PORT}'
 
@@ -73,8 +75,13 @@ class TestFast(unittest.TestCase):
     def test_home(self):
         r = requests.get(URL)
         self.assertEqual(200, r.status_code)
-        self.assertIn('nerdsniper', r.text.lower())
-        self.assertIn('about', r.text.lower())
+        text = r.text.lower()
+        self.assertIn('nerdsniper', text)
+        self.assertIn('about', text)
+
+        for modifer in queryparser.modifiers:
+            self.assertIn(modifer, text)
+
 
 
 class TestAbout(unittest.TestCase):
