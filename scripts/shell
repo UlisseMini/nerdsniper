@@ -1,0 +1,9 @@
+#!/bin/sh
+set -e
+scripts_dir="$(dirname "$(realpath "$0")")"
+ns_dir="$(dirname "$scripts_dir")"
+
+. "$ns_dir/.env"
+export PATH="$PATH:$scripts_dir"
+
+exec "/usr/bin/fish" # change this
