@@ -24,11 +24,6 @@ MOTTOS = [
 
 templates = Jinja2Templates(directory="templates")
 
-timings = {
-    'db': 0,
-    'jinja': 0,
-}
-
 @app.on_event('startup')
 async def startup():
     global pool
@@ -58,9 +53,6 @@ async def search(q: str):
 
 @app.get('/search', response_class=HTMLResponse)
 async def search_html(request: Request, q: str):
-    global timings
-
-    start = time.time()
     values = []
     err = ""
     try:
@@ -68,8 +60,6 @@ async def search_html(request: Request, q: str):
     except ParseError as e:
         print(e)
         err = str(e)
-
-    timings['db'] += time.time() - start
 
     start = time.time()
     rendered = templates.TemplateResponse('search.html', {
@@ -80,7 +70,6 @@ async def search_html(request: Request, q: str):
         'search': q,
         'err': err,
     })
-    timings['jinja'] += time.time() - start
 
     return rendered
 
@@ -89,12 +78,6 @@ async def search_html(request: Request, q: str):
 @app.get('/api/search')
 async def search_api(q: str):
     return await search(q)
-
-
-@app.get('/api/timings')
-async def timings_api():
-    global timings
-    return timings
 
 
 @app.get('/', response_class=HTMLResponse)
