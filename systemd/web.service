@@ -1,0 +1,17 @@
+[Unit]
+Description=Nerdsniper website
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/home/uli/.local/bin/gunicorn -k uvicorn.workers.UvicornWorker main:app -b 0.0.0.0
+WorkingDirectory=/home/uli/nerdsniper/site
+Restart=always
+User=uli
+EnvironmentFile=/home/uli/.env
+Restart=always
+RestartSec=10
+StartLimitBurst=3
+StartLimitInterval=400
+

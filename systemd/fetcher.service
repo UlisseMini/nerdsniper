@@ -1,0 +1,14 @@
+[Unit]
+Description=Twts Fetcher
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/home/uli/nerdsniper/fetcher/fetcher
+Restart=always
+User=uli
+EnvironmentFile=/home/uli/.env
+Restart=always
+RestartSec=10
+
