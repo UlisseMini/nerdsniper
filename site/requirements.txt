@@ -1,4 +1,5 @@
 fastapi
 aiofiles
+markdown2
 jinja2
 asyncpg
