@@ -1,6 +1,10 @@
 name: Deploy
 
-on: [push]
+on:
+  push:
+    paths:
+      - 'site/**'
+
 
 jobs:
   deploy:
@@ -20,15 +24,6 @@ jobs:
         source: "."
         target: "~/nerdsniper"
 
-    # - name: Rebuilding the fetcher
-    #   uses: appleboy/ssh-action@master
-    #   with:
-    #     host: ${{ secrets.HOST }}
-    #     USERNAME: ${{ secrets.USERNAME }}
-    #     PORT: ${{ secrets.PORT }}
-    #     KEY: ${{ secrets.SSHKEY }}
-    #     script: cd ~/nerdsniper/fetcher; go build
-
     - name: Installing python dependencies
       uses: appleboy/ssh-action@master
       with:
@@ -47,11 +42,3 @@ jobs:
         KEY: ${{ secrets.SSHKEY }}
         script: systemctl restart web
 
-    # - name: Restarting the fetcher
-    #   uses: appleboy/ssh-action@master
-    #   with:
-    #     host: ${{ secrets.HOST }}
-    #     USERNAME: root
-    #     PORT: ${{ secrets.PORT }}
-    #     KEY: ${{ secrets.SSHKEY }}
-    #     script: systemctl restart fetcher
