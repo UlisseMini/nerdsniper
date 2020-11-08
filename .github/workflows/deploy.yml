@@ -29,6 +29,14 @@ jobs:
     #     KEY: ${{ secrets.SSHKEY }}
     #     script: cd ~/nerdsniper/fetcher; go build
 
+    - name: Restarting the web server
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.HOST }}
+        USERNAME: root
+        PORT: ${{ secrets.PORT }}
+        KEY: ${{ secrets.SSHKEY }}
+        script: pip3 install -r /home/${{ secrets.USERNAME }}/nerdsniper/site/requirements.txt
 
     - name: Restarting the web server
       uses: appleboy/ssh-action@master
