@@ -114,9 +114,9 @@ import os
 
 async def main():
     pool = await pg.create_pool(
-        user=os.environ['PG_USER'],
-        password=os.environ['PG_PASS'],
-        database=os.environ['PG_DB'],
+        user=os.environ.get('PG_USER')     or 'postgres',
+        password=os.environ.get('PG_PASS') or 'postgres',
+        database=os.environ.get('PG_DB')   or 'postgres',
     )
 
     # splitting this into multiple async coroutines
