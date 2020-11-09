@@ -131,9 +131,9 @@ def _lang(val, sql, where):
 
 
 modifiers = {
-    'followers': _followers,
-    'following': _following,
-    'tweets': _tweet_count,
+    # 'followers': _followers,
+    # 'following': _following,
+    # 'tweets': _tweet_count,
     'gender': _gender,
     'lang': _lang
 }
