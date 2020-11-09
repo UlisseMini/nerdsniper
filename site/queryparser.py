@@ -116,6 +116,7 @@ def _lang(val, sql, where):
     """
     lang:en, lang:jp etc
     filter results based on user language, supported languages are listed [here](https://developer.twitter.com/en/docs/twitter-api/v1/developer-utilities/supported-languages/api-reference/get-help-languages#example-response)
+    If no langauge is specified, a default of english (en) is used.
     """
     val = val.lower()
 
@@ -182,5 +183,9 @@ def _parse_query(query: str) -> (str, str):
         orderby = ''
         args = []
 
+
+    # default lang en
+    if 'lang=' not in where:
+        sql, where = _lang('en', sql, where)
 
     return sql.format(limit=LIMIT, where=where, search=search, orderby=orderby), args
