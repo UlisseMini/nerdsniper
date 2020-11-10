@@ -15,10 +15,10 @@ import asyncpg as pg
 app = FastAPI()
 
 MOTTOS = [
+    "the twitter search engine",
     "when you don't have friends, snipe them",
     "because we're all so alone",
     "privacy is dead",
-    "i profit from your loneliness",
     "the home of friendly cyberstalkers"
 ]
 
@@ -39,6 +39,16 @@ async def shutdown():
     await pool.close()
 
 
+def get_motto(request: Request):
+    # basic SEO; show MOTTOS[0] when crawler
+    h = request.headers.get('user-agent')
+    if h is not None and 'bot' in h:
+        return MOTTOS[0]
+    else:
+        return random.choice(MOTTOS)
+
+
+
 async def search(q: str):
     print('search', q)
     sql, args = parse_query(q)
@@ -51,6 +61,7 @@ async def search(q: str):
     return values
 
 
+
 @app.get('/search', response_class=HTMLResponse)
 async def search_html(request: Request, q: str):
     values = []
@@ -61,12 +72,14 @@ async def search_html(request: Request, q: str):
         print(e)
         err = str(e)
 
+
+
     start = time.time()
     rendered = templates.TemplateResponse('search.html', {
         'users': values,
         'num_results': len(values),
         'request': request,
-        'motto': random.choice(MOTTOS),
+        'motto': get_motto(request),
         'search': q,
         'err': err,
     })
@@ -83,7 +96,7 @@ async def search_api(q: str):
 @app.get('/', response_class=HTMLResponse)
 async def index(request: Request):
     return templates.TemplateResponse('home.html', {
-        'motto': random.choice(MOTTOS),
+        'motto': get_motto(request),
         'docs': queryparser.docs,
         'request': request,
     })
