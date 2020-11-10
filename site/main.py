@@ -42,7 +42,7 @@ async def shutdown():
 def get_motto(request: Request):
     # basic SEO; show MOTTOS[0] when crawler
     h = request.headers.get('user-agent')
-    if h is not None and 'bot' in h:
+    if h is not None and 'bot' in h.lower():
         return MOTTOS[0]
     else:
         return random.choice(MOTTOS)
