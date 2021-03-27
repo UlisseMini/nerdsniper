@@ -19,7 +19,8 @@ MOTTOS = [
     "when you don't have friends, snipe them",
     "because we're all so alone",
     "privacy is dead",
-    "the home of friendly cyberstalkers"
+    "the home of friendly cyberstalkers",
+    "this is how zucc feels"
 ]
 
 templates = Jinja2Templates(directory="templates")
