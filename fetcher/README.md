@@ -1,6 +1,3 @@
-
-There are two approaches for fetching from the twitter api
-
 ## Bulk
 Using [tweets/sampled-stream](https://developer.twitter.com/en/docs/twitter-api/tweets/sampled-stream/introduction)
 
@@ -53,6 +50,7 @@ print(free / bpu) # 15m users can be stored in 60GB
 print(1e9 / bpu)  # ~250k users can be stored in 1GB
 ```
 
+Ignore non english languages (where `lang != 'en'`). english makes up `1/3` of the bulk stream.
 
 Pros:
 - No inactive accounts since they are from the bulk stream
@@ -60,4 +58,10 @@ Pros:
 
 Cons:
 - Less accounts can be supported
+
+
+## Other ideas
+
+Use [userauth](https://developer.twitter.com/en/docs/authentication/oauth-1-0a) in a webapp so people can sign in and lend me their account for fetching (incentivze with ratelimit/ads/other?)
+userauth [ratelimits](https://developer.twitter.com/en/docs/twitter-api/rate-limits) seem spicy (900 user/lookup every 15mins and 900 timeline lookups)
 
