@@ -1,5 +1,5 @@
 CREATE TABLE users (
-	id bigint,
+	id bigint PRIMARY KEY,
 	name varchar,
 	username varchar,
 	url varchar,
@@ -13,15 +13,12 @@ CREATE TABLE users (
 
 	followers_count int,
 	following_count int,
-	tweet_count int,
-
-	-- the users tweets, an array of tweet id
-	tweets bigint[]
+	tweet_count int
 );
 
 CREATE TABLE tweets (
+	id                  bigint PRIMARY KEY,
 	text                varchar,
-	id                  bigint,
 	author_id           bigint,
 	created_at          timestamp,
 	in_reply_to_user_id bigint,
@@ -36,6 +33,19 @@ CREATE TABLE tweets (
 	source              varchar
 );
 
-CREATE UNIQUE INDEX userids ON users (id);
-CREATE UNIQUE INDEX tweetids ON tweets (id);
+
+CREATE TABLE following (
+	userid bigint PRIMARY KEY,
+	following bigint[]
+);
+
+CREATE TABLE followers (
+	userid bigint PRIMARY KEY,
+	followers bigint[]
+);
+
+-- Null index so fetcher can update null users with their following/followers :D
+CREATE INDEX following_idx ON following (following) WHERE following IS NULL;
+CREATE INDEX followers_idx ON followers (followers) WHERE followers IS NULL;
+
 
