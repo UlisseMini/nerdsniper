@@ -14,7 +14,7 @@ PARAMS = {
 }
 
 U_FIELDS = 'id,name,username,url,description,location,created_at,pinned_tweet_id,protected,verified,followers_count,following_count,tweet_count'.split(',')
-T_FIELDS = 'text,id,author_id,created_at,in_reply_to_user_id,lang,retweet_count,reply_count,like_count,quote_count,possibly_sensitive,conversation_id,source'.split(',')
+T_FIELDS = 'text,id,author_id,created_at,in_reply_to_user_id,retweet_count,reply_count,like_count,quote_count,possibly_sensitive,conversation_id,source'.split(',')
 
 T_TABLE = 'tweets'
 U_TABLE = 'users'
@@ -122,14 +122,15 @@ async def update_db_daemon(conn, queue, BUF_SIZE=1000):
     nu = 0
     nt = 0
     while item := await queue.get():
-        print(f'i: {i} tweets: {nt} users: {nu}')
-        i += 1
-
-        includes = item.get('includes') or {}
-
         if d := item.get('data'):
+            # skip nonenglish and retweets, popular users will get included from mentions
+            if d['lang'] != 'en' or d['text'].startswith('RT '):
+                continue
+
             tweets.append(d)
 
+        # TODO: Filter out nonenglish tweets and users included
+        includes = item.get('includes') or {}
         tweets += includes.get('tweets') or []
         users += includes.get('users') or []
 
@@ -143,6 +144,10 @@ async def update_db_daemon(conn, queue, BUF_SIZE=1000):
         if len(users) > BUF_SIZE:
             await update_db(conn, users, U_TABLE, U_FIELDS)
             users.clear()
+
+        print(f'i: {i} tweets: {nt} users: {nu}')
+        i += 1
+
 
 
 
