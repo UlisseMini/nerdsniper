@@ -4,6 +4,7 @@ import asyncpg
 import os
 import json
 import dateutil.parser
+from follows import follows_daemon
 
 STREAM_URL = 'https://api.twitter.com/2/tweets/sample/stream'
 
@@ -81,8 +82,6 @@ async def update_db(conn, items, table, fields):
     Update table with items 'items' and fields 'fields'.
     fields must also be table columns!
     """
-    items = await remove_duplicates(conn, items, table)
-
     def to_record(item):
         item = prepare(item)
         return [item.get(k) for k in fields]
@@ -114,7 +113,7 @@ async def remove_duplicates(conn, items, table):
 
 
 
-async def update_db_daemon(conn, queue, BUF_SIZE=1000):
+async def update_db_daemon(conn, queue, BUF_SIZE=100):
     tweets = []
     users = []
 
@@ -134,39 +133,52 @@ async def update_db_daemon(conn, queue, BUF_SIZE=1000):
         tweets += includes.get('tweets') or []
         users += includes.get('users') or []
 
-        nt += len(includes.get('tweets') or []) + 1
-        nu += len(includes.get('users') or [])
-
         if len(tweets) > BUF_SIZE:
+            tweets = await remove_duplicates(conn, tweets, T_TABLE)
+            nt += len(tweets)
+
             await update_db(conn, tweets, T_TABLE, T_FIELDS)
             tweets.clear()
 
         if len(users) > BUF_SIZE:
+            users = await remove_duplicates(conn, users, U_TABLE)
+            nu += len(users)
+
+            for follow_table in ('followers', 'following'):
+                await conn.copy_records_to_table(
+                    follow_table,
+                    records=[(int(user['id']), None) for user in users],
+                    columns=['userid', follow_table]
+                )
+
             await update_db(conn, users, U_TABLE, U_FIELDS)
             users.clear()
 
-        print(f'i: {i} tweets: {nt} users: {nu}')
         i += 1
-
-
+        nt += 1 # this tweet
 
 
 async def main(s, conn):
     bearer_tokens = os.environ['BEARER_TOKENS'].split(',')
     queue = asyncio.Queue(maxsize=100)
-    fetchers = [asyncio.create_task(fetcher_retry(s, bearer, queue)) for bearer in bearer_tokens]
+    # Multiple fetchers doesn't speed up streaming endpoint, we just get duplicates
+    fetcher = asyncio.create_task(fetcher_retry(s, bearer_tokens[0], queue))
+    follows = asyncio.create_task(follows_daemon(s, conn, bearer_tokens))
     db_updater = asyncio.create_task(update_db_daemon(conn, queue))
+
 
     try:
         await db_updater
     except asyncio.CancelledError:
         pass
 
+    print('waiting for follows daemon...')
+    follows.cancel()
+    await follows
 
-    print('waiting for fetchers...')
-    for f in fetchers:
-        f.cancel()
-        await f
+    print('waiting for fetcher...')
+    fetcher.cancel()
+    await fetcher
 
 
 
