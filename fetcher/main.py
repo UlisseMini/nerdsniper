@@ -44,25 +44,32 @@ async def fetcher_retry(s, bearer, queue):
         pass
 
 
+def prepare(obj):
+    """
+    Prepare object does a few things
+    1. Flatten public metrics
+    2. Convert id, tweets_count, ... fields from string to int
+    3. Parse created_at into a datetime object
+    >>> prepare({'id': '1', 'public_metrics': {'tweet_id': '2', 'foo': 'bar'}})
+    {'id': 1, 'tweet_id': 2, 'foo': 'bar'}
+    >>> prepare({'id': '123', 'tweets_count': '69'})
+    {'id': 123, 'tweets_count': 69}
+    >>> prepare({'created_at': '2021-03-27T15:09:37.000Z'})
+    {'created_at': datetime.datetime(2021, 3, 27, 15, 9, 37)}
+    """
 
-
-def flatten_pubmet(obj):
-    # flatten public_metrics
+    # flatten public metrics
     if obj.get('public_metrics'):
         for k, v in obj['public_metrics'].items():
             obj[k] = v
         del obj['public_metrics']
 
-    return obj
-
-
-
-def prepare(obj):
-    obj = flatten_pubmet(obj)
+    # convert *id* and *count* to integers
     for k in obj:
         if 'id' in k or 'count' in k:
             obj[k] = int(obj[k])
 
+    # parse created_at
     if obj.get('created_at'):
         obj['created_at'] = dateutil.parser.parse(obj['created_at']).replace(tzinfo=None)
 
