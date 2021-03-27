@@ -16,8 +16,8 @@ PARAMS = {
 U_FIELDS = 'id,name,username,url,description,location,created_at,pinned_tweet_id,protected,verified,followers_count,following_count,tweet_count'.split(',')
 T_FIELDS = 'text,id,author_id,created_at,in_reply_to_user_id,lang,retweet_count,reply_count,like_count,quote_count,possibly_sensitive,conversation_id,source'.split(',')
 
-T_TABLE = 'tweets_new'
-U_TABLE = 'users_new'
+T_TABLE = 'tweets'
+U_TABLE = 'users'
 
 async def fetcher(s, bearer, queue):
     async with s.get(
@@ -180,7 +180,11 @@ async def main(s, conn):
 
 
 async def entry():
-    conn = await asyncpg.connect()
+    conn = await asyncpg.connect(
+        user=os.environ.get('PG_USER')     or 'postgres',
+        password=os.environ.get('PG_PASS') or 'postgres',
+        database=os.environ.get('PG_DB')   or 'postgres',
+    )
     s = aiohttp.ClientSession()
     try:
         await main(s, conn)
