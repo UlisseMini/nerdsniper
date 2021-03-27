@@ -1,6 +1,5 @@
 import asyncio
 import json
-import os
 
 ENDPOINT_URL = 'https://api.twitter.com/2/users/{id}/{endpoint}'
 
