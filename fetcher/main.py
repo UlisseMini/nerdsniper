@@ -106,13 +106,17 @@ def get_tweets(items):
 
 
 async def remove_duplicates(conn, items, table):
+    """
+    Remove duplicates in 'items' with respect to 'id' in db table 'table'
+    """
+
     items_by_id = {x['id']: x for x in items}
 
-    results = await conn.fetch(
+    duplicates = await conn.fetch(
         f'SELECT id FROM {table} WHERE id IN ({",".join(items_by_id.keys())})'
     )
 
-    duplicate_ids = set(str(x['id']) for x in results) # x['id'] is int
+    duplicate_ids = set(str(x['id']) for x in duplicates) # x['id'] is int
     ret = [x for xid, x in items_by_id.items() if xid not in duplicate_ids]
     return ret
 
@@ -140,20 +144,12 @@ async def update_db_daemon(conn, queue, BUF_SIZE=1000):
         nt += len(includes.get('tweets') or []) + 1
         nu += len(includes.get('users') or [])
 
-        # Todo:
-        # 2. remove duplicates every run
-        # 3. remove duplicates every time we get a good amount of users/tweets
-        # not sure if there can ever be duplicate tweet ids other then
-        # race condition from multiple fetchers. still gonna use db though.
-
         if len(tweets) > BUF_SIZE:
             tweets = await remove_duplicates(conn, tweets, T_TABLE)
             await update_db_tweets(conn, get_tweets(tweets))
             tweets.clear()
 
-
         if len(users) > BUF_SIZE:
-            # import ipdb; ipdb.set_trace()
             users = await remove_duplicates(conn, users, U_TABLE)
             await update_db_users(conn, get_users(users))
             users.clear()
