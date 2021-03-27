@@ -27,7 +27,7 @@ CREATE TABLE tweets (
 	text                varchar,
 	id                  bigint,
 	author_id           bigint,
-	created_at          varchar,
+	created_at          timestamp,
 	in_reply_to_user_id bigint,
 	lang                varchar,
 	retweet_count       integer,
