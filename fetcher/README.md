@@ -65,3 +65,8 @@ Cons:
 Use [userauth](https://developer.twitter.com/en/docs/authentication/oauth-1-0a) in a webapp so people can sign in and lend me their account for fetching (incentivze with ratelimit/ads/other?)
 userauth [ratelimits](https://developer.twitter.com/en/docs/twitter-api/rate-limits) seem spicy (900 user/lookup every 15mins and 900 timeline lookups)
 
+
+I don't know if I should use the [filtered-stream](https://developer.twitter.com/en/docs/twitter-api/tweets/filtered-stream/introduction) endpoint, I recall trying it once where it woulden't let me use it without a search term (said too many results or something)
+on the one hand I can filter based on language and not being a retweet easily, but we're limited by the project wide [tweet cap](https://developer.twitter.com/en/docs/projects/overview#tweet-cap) of 500k tweets/month.
+And I can't use userauth for streaming tweets ): so I'll just use the bulk endpoint.
+
