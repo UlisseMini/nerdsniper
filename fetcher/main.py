@@ -76,40 +76,22 @@ def prepare(obj):
     return obj
 
 
+async def update_db(conn, items, table, fields):
+    """
+    Update table with items 'items' and fields 'fields'.
+    fields must also be table columns!
+    """
 
-def tweet_from(o):
-    return [o.get(k) for k in T_FIELDS]
+    def to_record(item):
+        item = prepare(item)
+        return [item.get(k) for k in fields]
 
+    records = [to_record(item) for item in items]
 
-def user_from(o):
-    return [o.get(k) for k in U_FIELDS]
-
-
-
-async def update_db_tweets(conn, tweets):
-    print(f'inserting {len(tweets)} new tweets')
     result = await conn.copy_records_to_table(
-        T_TABLE, records=tweets, columns=T_FIELDS,
+        table, records=records, columns=fields,
     )
-    print(result)
-
-
-
-async def update_db_users(conn, users):
-    print(f'inserting {len(users)} new users')
-    result = await conn.copy_records_to_table(
-        U_TABLE, records=users, columns=U_FIELDS,
-    )
-    print(result)
-
-
-
-def get_users(items):
-    return [user_from(prepare(obj)) for obj in items]
-
-
-def get_tweets(items):
-    return [tweet_from(prepare(obj)) for obj in items]
+    return result
 
 
 async def remove_duplicates(conn, items, table):
@@ -153,12 +135,16 @@ async def update_db_daemon(conn, queue, BUF_SIZE=1000):
 
         if len(tweets) > BUF_SIZE:
             tweets = await remove_duplicates(conn, tweets, T_TABLE)
-            await update_db_tweets(conn, get_tweets(tweets))
+            print(f'inserting {len(tweets)} new tweets')
+            result = await update_db(conn, tweets, T_TABLE, T_FIELDS)
+            print(result)
             tweets.clear()
 
         if len(users) > BUF_SIZE:
             users = await remove_duplicates(conn, users, U_TABLE)
-            await update_db_users(conn, get_users(users))
+            print(f'inserting {len(users)} new users')
+            result = await update_db(conn, users, U_TABLE, U_FIELDS)
+            print(result)
             users.clear()
 
 
