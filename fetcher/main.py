@@ -81,6 +81,7 @@ async def update_db(conn, items, table, fields):
     Update table with items 'items' and fields 'fields'.
     fields must also be table columns!
     """
+    items = await remove_duplicates(conn, items, table)
 
     def to_record(item):
         item = prepare(item)
@@ -88,25 +89,27 @@ async def update_db(conn, items, table, fields):
 
     records = [to_record(item) for item in items]
 
+    print(f'COPY {len(records)} RECORDS TO {table}')
     result = await conn.copy_records_to_table(
         table, records=records, columns=fields,
     )
-    return result
+    print(result)
 
 
 async def remove_duplicates(conn, items, table):
     """
     Remove duplicates in 'items' with respect to 'id' in db table 'table'
+    **NOTE: items are before prepare() so item['id'] is str, but dup['id'] is int (from db)
     """
 
-    items_by_id = {x['id']: x for x in items}
+    items_by_id = {int(item['id']): item for item in items}
 
     duplicates = await conn.fetch(
-        f'SELECT id FROM {table} WHERE id IN ({",".join(items_by_id.keys())})'
+        f'SELECT id FROM {table} WHERE id IN ({",".join(item["id"] for item in items)})'
     )
 
-    duplicate_ids = set(str(x['id']) for x in duplicates) # x['id'] is int
-    ret = [x for xid, x in items_by_id.items() if xid not in duplicate_ids]
+    duplicate_ids = set(dup['id'] for dup in duplicates)
+    ret = [item for itemid, item in items_by_id.items() if itemid not in duplicate_ids]
     return ret
 
 
@@ -134,17 +137,11 @@ async def update_db_daemon(conn, queue, BUF_SIZE=1000):
         nu += len(includes.get('users') or [])
 
         if len(tweets) > BUF_SIZE:
-            tweets = await remove_duplicates(conn, tweets, T_TABLE)
-            print(f'inserting {len(tweets)} new tweets')
-            result = await update_db(conn, tweets, T_TABLE, T_FIELDS)
-            print(result)
+            await update_db(conn, tweets, T_TABLE, T_FIELDS)
             tweets.clear()
 
         if len(users) > BUF_SIZE:
-            users = await remove_duplicates(conn, users, U_TABLE)
-            print(f'inserting {len(users)} new users')
-            result = await update_db(conn, users, U_TABLE, U_FIELDS)
-            print(result)
+            await update_db(conn, users, U_TABLE, U_FIELDS)
             users.clear()
 
 
