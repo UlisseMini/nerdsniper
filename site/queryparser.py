@@ -1,5 +1,6 @@
 import markdown2
 import string
+from typing import List, Tuple
 
 SEARCH_SQL_TEMPLATE = '''
 WITH results AS (
@@ -112,31 +113,11 @@ def _gender(val, sql, where, conf = 0.7):
     return sql, where
 
 
-def _lang(val, sql, where):
-    """
-    lang:en, lang:jp etc
-    filter results based on user language, supported languages are listed [here](https://developer.twitter.com/en/docs/twitter-api/v1/developer-utilities/supported-languages/api-reference/get-help-languages#example-response)
-    If no langauge is specified, a default of english (en) is used.
-    """
-    val = val.lower()
-
-    # please uli be careful editing this code sqli is looming
-    # (todo: check that language actually exists, could get langs from db at startup
-    #  once I refactor schema to use an enum with num index like a smart boi)
-    if not all(c in string.ascii_lowercase+'-' for c in val):
-        raise ParseError(f'Invalid language: {val}')
-
-    where += f"\nAND lang='{val}'"
-
-    return sql, where
-
-
 modifiers = {
     # 'followers': _followers,
     # 'following': _following,
     # 'tweets': _tweet_count,
     'gender': _gender,
-    'lang': _lang
 }
 
 # stur the soup of metaprogramming
@@ -157,7 +138,7 @@ for fn in modifiers.values():
 # we let it through.
 # we return (sql, args) where args is a list to be passed through asyncpg
 # for serialization
-def _parse_query(query: str) -> (str, str):
+def _parse_query(query: str) -> Tuple[str, List[str]]:
     sql = SEARCH_SQL_TEMPLATE
 
     where = ''
@@ -182,10 +163,5 @@ def _parse_query(query: str) -> (str, str):
         search  = 'true' # true on all profiles
         orderby = ''
         args = []
-
-
-    # default lang en
-    if 'lang=' not in where:
-        sql, where = _lang('en', sql, where)
 
     return sql.format(limit=LIMIT, where=where, search=search, orderby=orderby), args
