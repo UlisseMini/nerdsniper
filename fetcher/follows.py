@@ -3,15 +3,11 @@ import json
 
 ENDPOINT_URL = 'https://api.twitter.com/2/users/{id}/{endpoint}'
 
-# Whoa, I can get followers userdata in bulk at 1000/min :D
-
 async def get_follow(s, userid, bearer, endpoint):
     "Endpoint can be followers or following"
 
     url = ENDPOINT_URL.format(id=userid, endpoint=endpoint)
-    print('GET ' + url)
     headers = {"Authorization": "Bearer " + bearer}
-    print(headers)
     async with s.get(url=url, headers=headers) as resp:
         text = await resp.text()
         return text
@@ -64,11 +60,10 @@ async def follows_update(s, conn, bearers, endpoint):
         follows_ids = [int(user['id']) for user in follows['data']]
 
         print(f'UPDATE {endpoint} userid={userid} add {len(follows_ids)}')
-        result = await conn.execute(
+        await conn.execute(
             f'UPDATE {endpoint} SET {endpoint} = $1 WHERE userid={userid}',
             follows_ids
         )
-        print(result)
 
 async def follows_daemon(s, conn, bearers):
     try:
@@ -76,7 +71,7 @@ async def follows_daemon(s, conn, bearers):
             for endpoint in ('followers', 'following'):
                 await follows_update(s, conn, bearers, endpoint)
 
-            await asyncio.sleep(10)
+            await asyncio.sleep(120)
 
     except asyncio.CancelledError:
         pass
