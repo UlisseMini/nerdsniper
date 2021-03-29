@@ -13,7 +13,9 @@ CREATE TABLE users (
 
 	followers_count int,
 	following_count int,
-	tweet_count int
+	tweet_count int,
+
+	textsearchable tsvector GENERATED ALWAYS AS (to_tsvector('english', description)) STORED
 );
 
 CREATE TABLE tweets (
@@ -47,5 +49,4 @@ CREATE TABLE followers (
 -- Null index so fetcher can update null users with their following/followers :D
 CREATE INDEX following_idx ON following (following) WHERE following IS NULL;
 CREATE INDEX followers_idx ON followers (followers) WHERE followers IS NULL;
-
 
