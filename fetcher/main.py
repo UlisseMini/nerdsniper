@@ -20,19 +20,27 @@ T_FIELDS = 'text,id,author_id,created_at,in_reply_to_user_id,retweet_count,reply
 T_TABLE = 'tweets'
 U_TABLE = 'users'
 
+# If we haven't received tweets for a while assume something has gone horribly wrong
+# and reconnect to the stream
+TIMEOUT_SECONDS = 10
+
 async def fetcher(s, bearer, queue):
     async with s.get(
         STREAM_URL,
         headers={"Authorization": "Bearer " + bearer},
         params=PARAMS,
     ) as resp:
-        async for line in resp.content:
-            if line.strip() == b'':
-                continue
-
-            data = json.loads(line.decode())
-            await queue.put(data)
-
+        try:
+            while True:
+                # If we don't receive new tweets in 5 seconds the stream must have gotten
+                # disconnected somehow
+                line = await asyncio.wait_for(resp.content.readline(), TIMEOUT_SECONDS)
+                if line.strip() == b'':
+                    continue
+                data = json.loads(line.decode())
+                await queue.put(data)
+        except asyncio.TimeoutError:
+            print('TIMEOUT STREAM AFTER %d SECONDS WITHOUT TWEETS' % TIMEOUT_SECONDS)
 
 async def fetcher_retry(s, bearer, queue):
     try:
@@ -123,6 +131,7 @@ async def update_db_daemon(conn, queue, BUF_SIZE=100):
     while item := await queue.get():
         if d := item.get('data'):
             # skip nonenglish and retweets, popular users will get included from mentions
+            # TODO: Only skip saving the tweet, we can still save the user
             if d['lang'] != 'en' or d['text'].startswith('RT '):
                 continue
 
@@ -154,6 +163,7 @@ async def update_db_daemon(conn, queue, BUF_SIZE=100):
             await update_db(conn, users, U_TABLE, U_FIELDS)
             users.clear()
 
+        print(f'i: {i}\ttweets: {nt}\tusers: {nu}')
         i += 1
         nt += 1 # this tweet
 
