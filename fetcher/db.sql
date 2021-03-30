@@ -35,6 +35,24 @@ CREATE TABLE tweets (
 	source              varchar
 );
 
+CREATE TABLE context_annotations (
+	domain_id int,
+	entity_id bigint,
+	tweet_id bigint
+);
+
+CREATE INDEX context_annotations_tweet_id ON context_annotations (tweet_id);
+CREATE INDEX context_annotations_domain_id ON context_annotations (domain_id);
+
+CREATE TABLE domain_names (
+	domain_id int PRIMARY KEY,
+	name varchar
+);
+
+CREATE TABLE entity_names (
+	entity_id bigint PRIMARY KEY,
+	name varchar
+);
 
 CREATE TABLE following (
 	userid bigint PRIMARY KEY,
