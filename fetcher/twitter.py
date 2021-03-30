@@ -4,6 +4,7 @@ Twitter API wrappers, focused on making requests with a pool of tokens
 
 import os
 import aiohttp
+import aiohttp.client_exceptions
 import json
 import asyncio
 
@@ -14,6 +15,7 @@ STREAM_TIMEOUT = 10
 
 class API():
     def __init__(self, bearer_tokens):
+        assert type(bearer_tokens) == list
         self.bearer_tokens = bearer_tokens
         self.i = 0 # current bearer
         self.s = aiohttp.ClientSession()
@@ -55,7 +57,8 @@ class API():
                     if line.strip() == b'':
                         continue
                     yield json.loads(line.decode())
-            except asyncio.TimeoutError:
+            # ClientPayloadError seems to be a bug in aiohttp, or maybe twitter is sending invalid data
+            except (asyncio.TimeoutError, aiohttp.client_exceptions.ClientPayloadError):
                 pass
 
     async def sampled_stream_restart(self, retry_delay=10, timeout=STREAM_TIMEOUT, **kwargs):
