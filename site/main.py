@@ -3,7 +3,6 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 import random
-import time
 import os
 from queryparser import parse_query, ParseError
 import queryparser
@@ -75,7 +74,6 @@ async def search_html(request: Request, q: str):
 
 
 
-    start = time.time()
     rendered = templates.TemplateResponse('search.html', {
         'users': values,
         'num_results': len(values),
