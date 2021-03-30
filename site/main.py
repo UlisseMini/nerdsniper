@@ -9,8 +9,6 @@ import queryparser
 
 import asyncpg as pg
 
-# TODO: DDOS, I mean benchmark
-
 app = FastAPI()
 
 MOTTOS = [
