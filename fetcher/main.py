@@ -4,9 +4,7 @@ import asyncpg
 import os
 import json
 import dateutil.parser
-from follows import follows_daemon
-
-STREAM_URL = 'https://api.twitter.com/2/tweets/sample/stream'
+import twitter
 
 PARAMS = {
     "expansions": "attachments.media_keys,author_id,entities.mentions.username,geo.place_id,in_reply_to_user_id,referenced_tweets.id,referenced_tweets.id.author_id",
@@ -23,35 +21,6 @@ U_TABLE = 'users'
 # If we haven't received tweets for a while assume something has gone horribly wrong
 # and reconnect to the stream
 TIMEOUT_SECONDS = 10
-
-async def fetcher(s, bearer, queue):
-    async with s.get(
-        STREAM_URL,
-        headers={"Authorization": "Bearer " + bearer},
-        params=PARAMS,
-    ) as resp:
-        try:
-            while True:
-                # If we don't receive new tweets in 5 seconds the stream must have gotten
-                # disconnected somehow
-                line = await asyncio.wait_for(resp.content.readline(), TIMEOUT_SECONDS)
-                if line.strip() == b'':
-                    continue
-                data = json.loads(line.decode())
-                await queue.put(data)
-        except asyncio.TimeoutError:
-            print('TIMEOUT STREAM AFTER %d SECONDS WITHOUT TWEETS' % TIMEOUT_SECONDS)
-
-async def fetcher_retry(s, bearer, queue):
-    try:
-        while True:
-            await fetcher(s, bearer, queue)
-            print('Disconnected from stream! reconnecting in 60s...')
-            await asyncio.sleep(60)
-
-    except asyncio.CancelledError:
-        pass
-
 
 def prepare(obj):
     """
@@ -121,26 +90,28 @@ async def remove_duplicates(conn, items, table):
 
 
 
-async def update_db_daemon(conn, queue, BUF_SIZE=100):
+async def main(api, conn, BUF_SIZE=100):
     tweets = []
     users = []
 
     i = 1
     nu = 0
     nt = 0
-    while item := await queue.get():
+    async for item in api.sampled_stream_restart(params=PARAMS):
+        # is it a retweet? we don't save tweets that are retweets.
+        rt = False
         if d := item.get('data'):
-            # skip nonenglish and retweets, popular users will get included from mentions
-            # TODO: Only skip saving the tweet, we can still save the user
-            if d['lang'] != 'en' or d['text'].startswith('RT '):
+            if d['lang'] != 'en':
                 continue
 
-            tweets.append(d)
+            rt = d['text'].startswith('RT ')
+            if not rt:
+                tweets.append(d)
 
-        # TODO: Filter out nonenglish tweets and users included
         includes = item.get('includes') or {}
-        tweets += includes.get('tweets') or []
         users += includes.get('users') or []
+        if not rt:
+            tweets += includes.get('tweets') or []
 
         if len(tweets) > BUF_SIZE:
             tweets = await remove_duplicates(conn, tweets, T_TABLE)
@@ -168,43 +139,19 @@ async def update_db_daemon(conn, queue, BUF_SIZE=100):
         nt += 1 # this tweet
 
 
-async def main(s, conn):
-    bearer_tokens = os.environ['BEARER_TOKENS'].split(',')
-    queue = asyncio.Queue(maxsize=100)
-    # Multiple fetchers doesn't speed up streaming endpoint, we just get duplicates
-    fetcher = asyncio.create_task(fetcher_retry(s, bearer_tokens[0], queue))
-    follows = asyncio.create_task(follows_daemon(s, conn, bearer_tokens))
-    db_updater = asyncio.create_task(update_db_daemon(conn, queue))
-
-
-    try:
-        await db_updater
-    except asyncio.CancelledError:
-        pass
-
-    print('waiting for follows daemon...')
-    follows.cancel()
-    await follows
-
-    print('waiting for fetcher...')
-    fetcher.cancel()
-    await fetcher
-
-
-
 async def entry():
     conn = await asyncpg.connect(
         user=os.environ.get('PG_USER')     or 'postgres',
         password=os.environ.get('PG_PASS') or 'postgres',
         database=os.environ.get('PG_DB')   or 'postgres',
     )
-    s = aiohttp.ClientSession()
+    bearer_tokens = os.environ['BEARER_TOKENS'].split(',')
+    api = twitter.API(bearer_tokens)
     try:
-        await main(s, conn)
-
+        await main(api, conn)
     finally:
         await conn.close()
-        await s.close()
+        await api.close()
 
 
 if __name__ == '__main__':
@@ -219,5 +166,4 @@ if __name__ == '__main__':
         task.cancel()
         loop.run_until_complete(task)
         task.exception()
-
         loop.close()

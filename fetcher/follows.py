@@ -75,3 +75,14 @@ async def follows_daemon(s, conn, bearers):
 
     except asyncio.CancelledError:
         pass
+
+
+import aiohttp
+
+async def main():
+    async with aiohttp.ClientSession() as s:
+        followers()
+
+if __name__ == '__main__':
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(main())
