@@ -48,16 +48,20 @@ CREATE TABLE context_annotations (
 CREATE INDEX context_annotations_tweet_id ON context_annotations (tweet_id);
 CREATE INDEX context_annotations_domain_id ON context_annotations (domain_id);
 
+-- Domain given in context_annotations, name for id
 CREATE TABLE domain_names (
 	domain_id int PRIMARY KEY,
 	name varchar
 );
 
+-- Entity given in context annotations, name for id
 CREATE TABLE entity_names (
 	entity_id bigint PRIMARY KEY,
 	name varchar
 );
 
+
+/* Followers / Following is infeasible
 CREATE TABLE following (
 	userid bigint PRIMARY KEY,
 	following bigint[]
@@ -68,7 +72,7 @@ CREATE TABLE followers (
 	followers bigint[]
 );
 
--- Null index so fetcher can update null users with their following/followers :D
+-- Null index so fetcher can update null users with their following/followers
 CREATE INDEX following_idx ON following (following) WHERE following IS NULL;
 CREATE INDEX followers_idx ON followers (followers) WHERE followers IS NULL;
-
+*/
