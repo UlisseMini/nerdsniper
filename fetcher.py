@@ -8,7 +8,7 @@ import twitter
 
 PARAMS = {
     "expansions": "attachments.media_keys,author_id,entities.mentions.username,geo.place_id,in_reply_to_user_id,referenced_tweets.id,referenced_tweets.id.author_id",
-    "tweet.fields": "author_id,conversation_id,created_at,entities,geo,id,in_reply_to_user_id,lang,public_metrics,possibly_sensitive,referenced_tweets,source,text,withheld",
+    "tweet.fields": "author_id,conversation_id,created_at,entities,geo,id,in_reply_to_user_id,lang,public_metrics,possibly_sensitive,referenced_tweets,source,text,withheld,context_annotations",
     "user.fields": "created_at,description,entities,id,location,name,pinned_tweet_id,protected,public_metrics,url,username,verified,withheld",
 }
 
@@ -50,6 +50,23 @@ def prepare(obj):
     return obj
 
 
+async def remove_duplicates(conn, items, table):
+    """
+    Remove duplicates in 'items' with respect to 'id' in db table 'table'
+    **NOTE: items are before prepare() so item['id'] is str, but dup['id'] is int (from db)
+    """
+
+    items_by_id = {int(item['id']): item for item in items}
+
+    duplicates = await conn.fetch(
+        f'SELECT id FROM {table} WHERE id IN ({",".join(item["id"] for item in items)})'
+    )
+
+    duplicate_ids = set(dup['id'] for dup in duplicates)
+    ret = [item for itemid, item in items_by_id.items() if itemid not in duplicate_ids]
+    return ret
+
+
 async def update_db(conn, items, table, fields):
     """
     Update table with items 'items' and fields 'fields'.
@@ -68,21 +85,41 @@ async def update_db(conn, items, table, fields):
     print(result)
 
 
-async def remove_duplicates(conn, items, table):
-    """
-    Remove duplicates in 'items' with respect to 'id' in db table 'table'
-    **NOTE: items are before prepare() so item['id'] is str, but dup['id'] is int (from db)
-    """
+async def add_users_to_db(conn, users):
+    users_uniq = await remove_duplicates(conn, users, U_TABLE)
+    print(f'Removed {len(users) - len(users_uniq)} duplicate users')
+    await update_db(conn, users_uniq, U_TABLE, U_FIELDS)
 
-    items_by_id = {int(item['id']): item for item in items}
 
-    duplicates = await conn.fetch(
-        f'SELECT id FROM {table} WHERE id IN ({",".join(item["id"] for item in items)})'
-    )
+async def add_tweets_to_db(conn, tweets):
+    tweets_uniq = await remove_duplicates(conn, tweets, T_TABLE)
+    print(f'Removed {len(tweets) - len(tweets_uniq)} duplicate tweets')
+    await update_db(conn, tweets_uniq, T_TABLE, T_FIELDS)
 
-    duplicate_ids = set(dup['id'] for dup in duplicates)
-    ret = [item for itemid, item in items_by_id.items() if itemid not in duplicate_ids]
-    return ret
+
+
+    for tweet in tweets_uniq:
+        if tweet.get('context_annotations') is None:
+            continue
+
+        ctx_anno = tweet['context_annotations']
+        for anno in ctx_anno:
+            domain, entity = anno['domain'], anno['entity']
+
+            # TODO: Use remove_duplicates instead of executing each query (slow)
+            await conn.execute('''
+            INSERT INTO context_annotations (domain_id, entity_id, tweet_id) VALUES ($1, $2, $3)
+            ''', int(domain['id']), int(entity['id']), int(tweet['id']))
+
+            await conn.execute(
+                'INSERT INTO entity_names (entity_id, name) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+                int(entity['id']), entity['name']
+            )
+
+            await conn.execute(
+                'INSERT INTO domain_names (domain_id, name) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+                int(domain['id']), domain['name']
+            )
 
 
 
@@ -91,9 +128,10 @@ async def main(api, conn, BUF_SIZE=100):
     users = []
 
     i = 1
-    nu = 0
-    nt = 0
     async for item in api.sampled_stream_restart(params=PARAMS):
+        print(f'i: {i}' + ' '*20, end='\r')
+        i += 1
+
         # is it a retweet? we don't save tweets that are retweets.
         rt = False
         if d := item.get('data'):
@@ -110,22 +148,14 @@ async def main(api, conn, BUF_SIZE=100):
             tweets += includes.get('tweets') or []
 
         if len(tweets) > BUF_SIZE:
-            tweets = await remove_duplicates(conn, tweets, T_TABLE)
-            nt += len(tweets)
-
-            await update_db(conn, tweets, T_TABLE, T_FIELDS)
+            print()
+            await add_tweets_to_db(conn, tweets)
             tweets.clear()
 
         if len(users) > BUF_SIZE:
-            users = await remove_duplicates(conn, users, U_TABLE)
-            nu += len(users)
-
-            await update_db(conn, users, U_TABLE, U_FIELDS)
+            print()
+            await add_users_to_db(conn, users)
             users.clear()
-
-        print(f'i: {i}\ttweets: {nt}\tusers: {nu}')
-        i += 1
-        nt += 1 # this tweet
 
 
 async def entry():
