@@ -3,8 +3,10 @@ name: Deploy site
 on:
   push:
     paths:
-      - 'site/**'
-
+      - 'static/**'
+      - 'templates/**'
+      - 'serve.py'
+      - 'queryparser.py'
 
 jobs:
   deploy:
@@ -31,7 +33,7 @@ jobs:
         USERNAME: root
         PORT: ${{ secrets.PORT }}
         KEY: ${{ secrets.SSHKEY }}
-        script: pip3 install -r /home/${{ secrets.USERNAME }}/nerdsniper/site/requirements.txt
+        script: pip3 install -r /home/${{ secrets.USERNAME }}/nerdsniper/requirements.txt
 
     - name: Restarting the web server
       uses: appleboy/ssh-action@master
