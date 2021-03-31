@@ -1,5 +1,6 @@
 """
 Twitter API wrappers, focused on making requests with a pool of tokens
+Only bearer tokens for now, but user auth shoulden't be hard to add
 """
 
 import os
@@ -7,8 +8,6 @@ import aiohttp
 import aiohttp.client_exceptions
 import json
 import asyncio
-
-# Only bearer tokens for now, but user auth shoulden't be hard to add
 
 STREAM_TIMEOUT = 10
 

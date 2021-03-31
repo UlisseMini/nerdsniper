@@ -18,10 +18,6 @@ T_FIELDS = 'text,id,author_id,created_at,in_reply_to_user_id,retweet_count,reply
 T_TABLE = 'tweets'
 U_TABLE = 'users'
 
-# If we haven't received tweets for a while assume something has gone horribly wrong
-# and reconnect to the stream
-TIMEOUT_SECONDS = 10
-
 def prepare(obj):
     """
     Prepare object does a few things
@@ -123,13 +119,6 @@ async def main(api, conn, BUF_SIZE=100):
         if len(users) > BUF_SIZE:
             users = await remove_duplicates(conn, users, U_TABLE)
             nu += len(users)
-
-            for follow_table in ('followers', 'following'):
-                await conn.copy_records_to_table(
-                    follow_table,
-                    records=[(int(user['id']), None) for user in users],
-                    columns=['userid', follow_table]
-                )
 
             await update_db(conn, users, U_TABLE, U_FIELDS)
             users.clear()

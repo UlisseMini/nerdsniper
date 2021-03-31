@@ -15,6 +15,10 @@ CREATE TABLE users (
 	following_count int,
 	tweet_count int,
 
+	-- gender ratio on twitter is ~0.3 female by default
+	-- https://www.statista.com/statistics/828092/distribution-of-users-on-twitter-worldwide-gender/
+	p_female numeric(2, 1) DEFAULT 0.3,
+
 	textsearchable tsvector GENERATED ALWAYS AS (to_tsvector('english', description)) STORED
 );
 

@@ -1,9 +1,0 @@
-#!/bin/sh
-set -e
-scripts_dir="$(dirname "$(realpath "$0")")"
-ns_dir="$(dirname "$scripts_dir")"
-
-export SHELL="$scripts_dir/shell"
-
-tmux new-session "$SHELL" \;\
-	set-option default-shell "$SHELL"

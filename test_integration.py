@@ -1,4 +1,4 @@
-from main import *
+from site import *
 import unittest
 import requests
 
@@ -142,22 +142,6 @@ class TestSearch(unittest.TestCase):
             self.assertIn(query, result.text.lower())
 
         e = driver.find_element_by_css_selector('input[type="search"]')
-
-
-    def test_no_mod_results_small(self):
-        for mod in ['tweets', 'followers', 'following']:
-            query = 'foo {}:<0'.format(mod)
-            with self.subTest(mod, query=query):
-                results = self.search_run(query)
-                self.assertEqual(results, [])
-
-
-    def test_no_mod_results_big(self):
-        for mod in ['tweets', 'followers', 'following']:
-            query = 'foo {}:>100000000'.format(mod)
-            with self.subTest(mod, query=query):
-                results = self.search_run(query)
-                self.assertEqual(results, [])
 
 
     def test_search(self):
