@@ -90,15 +90,6 @@ async def search_api(q: str):
     return await search(q)
 
 
-@app.get('/api/user')
-async def user(id: int):
-    async with pool.acquire() as conn:
-        # TODO: Fix sqli
-        values = await conn.fetch(f'SELECT * FROM users WHERE id={id}')
-
-    return values
-
-
 @app.get('/', response_class=HTMLResponse)
 async def index(request: Request):
     return templates.TemplateResponse('home.html', {
