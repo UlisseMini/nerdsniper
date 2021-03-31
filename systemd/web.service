@@ -5,8 +5,8 @@ After=network-online.target
 
 [Service]
 Type=simple
-ExecStart=/home/uli/.local/bin/gunicorn -k uvicorn.workers.UvicornWorker main:app -b 0.0.0.0
-WorkingDirectory=/home/uli/nerdsniper/site
+ExecStart=/home/uli/.local/bin/gunicorn -k uvicorn.workers.UvicornWorker serve:app -b 0.0.0.0
+WorkingDirectory=/home/uli/nerdsniper/
 Restart=always
 User=uli
 EnvironmentFile=/home/uli/.env
